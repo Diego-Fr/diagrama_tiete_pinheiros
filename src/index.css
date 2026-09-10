@@ -56,15 +56,13 @@ body {
 .station-box-wrapper {
   background: transparent;
   border: none;
+  /* desbota suave quando a legenda destaca outro nível (Marker.setOpacity) */
+  transition: opacity 140ms ease;
 }
 
 .station-box {
   display: flex;
   flex-direction: column;
-  width: 112px;
-  /* Altura fixa: precisa bater com `iconSize` para o ponto geográfico cair
-     exatamente no centro da caixa (ver `iconAnchor` em StationsLayer). */
-  height: 38px;
   font-size: 11px;
   line-height: 1.25;
   background: #fff;
@@ -79,8 +77,47 @@ body {
     transform 120ms ease;
 }
 
+/* Tamanho por formato — precisa bater com BOX_DIMS (iconSize/anchor) para o
+   ponto geográfico cair no centro da caixa. */
+.station-box--completo {
+  width: 132px;
+  height: 54px;
+}
+.station-box--default {
+  width: 112px;
+  height: 38px;
+}
+.station-box--basico {
+  width: 98px;
+  height: 22px;
+}
+.station-box--minimalista {
+  width: 66px;
+  height: 20px;
+}
+
 .station-box:active {
   cursor: grabbing;
+}
+
+/* linha do nome (formato "completo") — trunca com reticências */
+.station-box__name {
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 600;
+  color: #334155;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* minimalista: valor centralizado ocupando a caixa toda */
+.station-box--minimalista .station-box__value {
+  min-width: 0;
+  padding: 0 4px;
+  justify-content: center;
 }
 
 /* linha 1: valor (>=50%) | tendência | unidade — ocupa a sobra vertical */
@@ -111,10 +148,9 @@ body {
   border-left: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-/* seta de tendência: bem maior que o texto da caixa */
-.station-box__trend {
-  font-size: 17px;
-  line-height: 1;
+/* seta de tendência: SVG centralizado pelo flex (sem font-glyph nem nudge) */
+.station-box__trend svg {
+  display: block;
 }
 
 .station-box__unit {
@@ -631,4 +667,350 @@ body {
 .date-range__apply:disabled {
   background: #94a3b8;
   cursor: not-allowed;
+}
+
+/* ===========================================================================
+   Barra de progresso do auto-refresh (topo do mapa)
+   =========================================================================== */
+.refresh-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 1250;
+  pointer-events: none;
+  background: rgba(2, 132, 199, 0.12);
+}
+.refresh-bar__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: #0284c7;
+  transition: width 250ms linear;
+}
+
+/* ===========================================================================
+   Card de data (canto superior direito) + engrenagem
+   =========================================================================== */
+.map-datecard {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1250;
+  display: flex;
+  align-items: stretch;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+.map-datecard__date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: default;
+}
+.map-datecard__date svg {
+  color: #64748b;
+}
+.map-datecard__sep {
+  width: 1px;
+  margin: 6px 0;
+  background: #e2e8f0;
+}
+.map-datecard__gear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+}
+.map-datecard__gear:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* ===========================================================================
+   Sidebar de configurações (esquerda)
+   =========================================================================== */
+.settings-sidebar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  bottom: 12px;
+  z-index: 1350;
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow:
+    0 12px 40px rgba(15, 23, 42, 0.28),
+    0 2px 8px rgba(15, 23, 42, 0.12);
+  overflow-y: auto;
+  animation: settings-in 160ms ease-out;
+}
+@keyframes settings-in {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+.settings-sidebar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.settings-sidebar__head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.settings-sidebar__close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.settings-sidebar__close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.settings-sidebar__section h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+}
+
+.settings-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.settings-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.settings-radio:hover {
+  background: #f8fafc;
+}
+.settings-radio input {
+  margin: 2px 0 0;
+  accent-color: #0369a1;
+}
+.settings-radio__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.settings-radio__text strong {
+  font-size: 13px;
+  color: #0f172a;
+}
+.settings-radio__hint {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* ===========================================================================
+   Legenda interativa (parte inferior central)
+   =========================================================================== */
+.map-legend {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1250;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(2px);
+}
+.map-legend__item {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+.map-legend__item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.25);
+}
+.map-legend__item--off {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+
+.map-legend__item--normal {
+  background: #e2e8f0;
+  color: #334155;
+}
+.map-legend__item--attention {
+  background: #facc15;
+  color: #713f12;
+}
+.map-legend__item--alert {
+  background: #fb923c;
+  color: #7c2d12;
+}
+.map-legend__item--emergency {
+  background: #c084fc;
+  color: #3b0764;
+}
+.map-legend__item--extravasation {
+  background: #f43f5e;
+  color: #4c0519;
+}
+
+/* ===========================================================================
+   Seletor de camada base (canto inferior esquerdo, estilo Google Maps)
+   =========================================================================== */
+.baselayer-switcher {
+  position: absolute;
+  bottom: 16px;
+  left: 12px;
+  z-index: 1250;
+}
+.baselayer-switcher__toggle {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.35);
+  border: 2px solid #ffffff;
+}
+.baselayer-switcher__toggle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.baselayer-switcher__toggle span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px 0 3px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.baselayer-switcher__panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: none;
+  gap: 8px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.28);
+}
+.baselayer-switcher:hover .baselayer-switcher__panel,
+.baselayer-switcher:focus-within .baselayer-switcher__panel {
+  display: flex;
+}
+
+.baselayer-switcher__opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+.baselayer-switcher__opt img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+}
+.baselayer-switcher__opt span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+.baselayer-switcher__opt--active img {
+  border-color: #2563eb;
+}
+.baselayer-switcher__opt--active span {
+  color: #1d4ed8;
+}
+
+/* botão de reset do zoom — só no gráfico do modal */
+.level-chart__reset {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #475569;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.level-chart__reset:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }

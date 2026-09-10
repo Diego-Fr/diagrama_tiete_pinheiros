@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchStationSeries } from "@/api/measurements";
 
-/** Recarrega no ritmo aproximado de transmissão das estações. */
-const REFETCH_INTERVAL_MS = 5 * 60 * 1000;
+/** Intervalo de auto-refresh das medições (a barra de progresso reflete isto). */
+export const MEASUREMENTS_REFRESH_MS = 60 * 1000;
 
 /**
  * Série agregada de cada estação (mapa id → {last, previous, min, max}).
@@ -12,7 +12,7 @@ export function useMeasurements(stationIds: number[]) {
   return useQuery({
     queryKey: ["measurements", stationIds],
     queryFn: ({ signal }) => fetchStationSeries(stationIds, signal),
-    refetchInterval: REFETCH_INTERVAL_MS,
-    staleTime: 60 * 1000,
+    refetchInterval: MEASUREMENTS_REFRESH_MS,
+    staleTime: 30 * 1000,
   });
 }

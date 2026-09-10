@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -12,6 +12,7 @@ import {
   type TooltipItem,
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
+import zoomPlugin from "chartjs-plugin-zoom";
 import type { Reading } from "@/api/measurements";
 import type { ReferenceThresholds } from "@/api/parameters";
 
@@ -22,6 +23,7 @@ ChartJS.register(
   Filler,
   Tooltip,
   annotationPlugin,
+  zoomPlugin,
 );
 
 const THRESHOLD_STYLE = {
@@ -81,6 +83,10 @@ export default function LevelChart({
       const v = thresholds[key];
       if (v == null) continue;
       const s = THRESHOLD_STYLE[key];
+      const meters = (v / 100).toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
       annotations[key] = {
         type: "line",
         yMin: v / 100,
@@ -90,7 +96,7 @@ export default function LevelChart({
         borderDash: [4, 3],
         label: {
           display: true,
-          content: s.label,
+          content: `${s.label} — ${meters} m`,
           position: "end",
           backgroundColor: "rgba(255,255,255,0.85)",
           color: s.color,
@@ -163,11 +169,26 @@ export default function LevelChart({
           },
         },
         annotation: { annotations },
+        // zoom só no modal e só no eixo X — o eixo Y (com os limiares) nunca muda
+        zoom: wide
+          ? {
+              pan: { enabled: true, mode: "x" },
+              zoom: {
+                mode: "x",
+                wheel: { enabled: true },
+                pinch: { enabled: true },
+                drag: { enabled: true, modifierKey: "shift" },
+              },
+              limits: { x: { min: "original", max: "original" } },
+            }
+          : undefined,
       },
     };
 
     return { data, options };
   }, [readings, thresholds, wide]);
+
+  const chartRef = useRef<ChartJS<"line"> | null>(null);
 
   if (!config) {
     return <p className="level-chart__empty">Sem dados suficientes no período.</p>;
@@ -175,7 +196,17 @@ export default function LevelChart({
 
   return (
     <div className="level-chart">
-      <Line data={config.data} options={config.options} />
+      {wide && (
+        <button
+          type="button"
+          className="level-chart__reset"
+          onClick={() => chartRef.current?.resetZoom()}
+          title="Resetar zoom"
+        >
+          ↺
+        </button>
+      )}
+      <Line ref={chartRef} data={config.data} options={config.options} />
     </div>
   );
 }
