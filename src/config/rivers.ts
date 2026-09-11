@@ -18,6 +18,9 @@ export type FlowDirection = "up" | "down" | "left" | "right";
  */
 export const RIVER_FLOW_DIRECTIONS: { match: RegExp; direction: FlowDirection }[] =
   [
+    { match: /tiet/i, direction: "left" },
     { match: /pinheiros/i, direction: "up" },
-    { match: /tiet/i, direction: "right" },
+    { match: /tamanduate/i, direction: "up" },
+    { match: /aricanduva/i, direction: "up" },
+    { match: /baqui/i, direction: "down" },
   ];

@@ -5,6 +5,7 @@ import type { StationSeries } from "@/api/measurements";
 import type { LevelClass } from "@/lib/classification";
 import { BOX_DIMS, type BoxFormat } from "@/lib/boxFormat";
 import { declutter } from "@/lib/declutter";
+import type { LatLngTuple } from "@/hooks/useStationPositions";
 import { fluviometricStations } from "@/data/stations";
 import { useStationStatus } from "@/hooks/useStationStatus";
 
@@ -46,7 +47,7 @@ function escapeHtml(value: string): string {
   );
 }
 
-const NBSP = "\u00a0"; // espaço fixo
+const NBSP = " "; // espaço fixo
 
 /**
  * Caixa do posto como DivIcon. Conteúdo por `format`:
@@ -136,6 +137,11 @@ function buildIcon(
   });
 }
 
+/** Estação "no lugar": posição igual à coordenada real (dentro de um épsilon). */
+function isAtAnchor(anchor: LatLngTuple, pos: LatLngTuple): boolean {
+  return Math.abs(anchor[0] - pos[0]) < 1e-6 && Math.abs(anchor[1] - pos[1]) < 1e-6;
+}
+
 interface StationsLayerProps {
   selectedId: number | null;
   boxFormat: BoxFormat;
@@ -143,13 +149,11 @@ interface StationsLayerProps {
   hoveredLevel: LevelClass | null;
   /** Níveis ocultados na legenda — suas caixas não renderizam. */
   hiddenLevels: Set<LevelClass>;
+  /** Posições ajustadas manualmente (arrastadas) — vencem o layout automático. */
+  overrides: Record<number, LatLngTuple>;
   onSelectStation: (stationId: number) => void;
-}
-
-/** Posição de exibição de cada caixa (após declutter) + se foi deslocada. */
-interface Layout {
-  pos: Map<number, [number, number]>;
-  moved: Set<number>;
+  /** Usuário soltou a caixa numa nova posição — persistir. */
+  onDragStation: (stationId: number, pos: LatLngTuple) => void;
 }
 
 export default function StationsLayer({
@@ -157,16 +161,16 @@ export default function StationsLayer({
   boxFormat,
   hoveredLevel,
   hiddenLevels,
+  overrides,
   onSelectStation,
+  onDragStation,
 }: StationsLayerProps) {
   const map = useMap();
   const { byId } = useStationStatus();
-  const [layout, setLayout] = useState<Layout>(() => ({
-    pos: new Map(),
-    moved: new Set(),
-  }));
+  const [autoPos, setAutoPos] = useState<Map<number, LatLngTuple>>(new Map());
 
   // Recalcula o anti-overlap em espaço de tela e converte de volta p/ lat/lng.
+  // (Independe dos ajustes manuais — esses só entram na hora de exibir.)
   const solve = useCallback(() => {
     const dims = BOX_DIMS[boxFormat];
     const items = fluviometricStations.map((s) => {
@@ -175,15 +179,13 @@ export default function StationsLayer({
     });
     const offsets = declutter(items, { gap: 5, pull: 0.04, iterations: 140 });
 
-    const pos = new Map<number, [number, number]>();
-    const moved = new Set<number>();
+    const pos = new Map<number, LatLngTuple>();
     for (const it of items) {
       const off = offsets.get(it.id) ?? { dx: 0, dy: 0 };
       const ll = map.containerPointToLatLng([it.ax + off.dx, it.ay + off.dy]);
       pos.set(it.id, [ll.lat, ll.lng]);
-      if (Math.hypot(off.dx, off.dy) > 3) moved.add(it.id);
     }
-    setLayout({ pos, moved });
+    setAutoPos(pos);
   }, [map, boxFormat]);
 
   // Geometria relativa só muda com zoom/resize; pan é invariante (markers
@@ -222,9 +224,10 @@ export default function StationsLayer({
         if (hiddenLevels.has(level)) return null; // ocultado na legenda
 
         const dimmed = hoveredLevel != null && level !== hoveredLevel;
-        const anchor: [number, number] = [s.lat, s.lng];
-        const pos = layout.pos.get(s.id) ?? anchor;
-        const isMoved = layout.moved.has(s.id);
+        const anchor: LatLngTuple = [s.lat, s.lng];
+        const pos = overrides[s.id] ?? autoPos.get(s.id) ?? anchor;
+        const isMoved = !isAtAnchor(anchor, pos);
+
         return (
           <Fragment key={s.id}>
             {isMoved && (
@@ -258,7 +261,14 @@ export default function StationsLayer({
               icon={icons.get(s.id)!}
               title={s.name}
               opacity={dimmed ? 0.12 : 1}
-              eventHandlers={{ click: () => onSelectStation(s.id) }}
+              draggable
+              eventHandlers={{
+                click: () => onSelectStation(s.id),
+                dragend: (e) => {
+                  const { lat, lng } = (e.target as L.Marker).getLatLng();
+                  onDragStation(s.id, [lat, lng]);
+                },
+              }}
             />
           </Fragment>
         );

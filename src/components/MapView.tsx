@@ -6,6 +6,7 @@ import StationsLayer from "@/components/StationsLayer";
 import type { BoxFormat } from "@/lib/boxFormat";
 import type { LevelClass } from "@/lib/classification";
 import type { BaseLayerId } from "@/hooks/useSettings";
+import type { LatLngTuple } from "@/hooks/useStationPositions";
 import { fluviometricStations } from "@/data/stations";
 import {
   BASEMAP_LABELS_URL,
@@ -32,7 +33,13 @@ interface MapViewProps {
   riverFlow: boolean;
   hoveredLevel: LevelClass | null;
   hiddenLevels: Set<LevelClass>;
+  /** Posições ajustadas manualmente (arrastadas) — vencem o layout automático. */
+  overrides: Record<number, LatLngTuple>;
+  /** Muda (incrementa) para forçar um novo fitBounds — botão "centralizar". */
+  recenterKey: number;
   onSelectStation: (stationId: number) => void;
+  /** Usuário soltou uma caixa numa nova posição — persistir. */
+  onDragStation: (stationId: number, pos: LatLngTuple) => void;
   /** Clique em área vazia do mapa. */
   onMapClick: () => void;
 }
@@ -43,12 +50,16 @@ function MapClickHandler({ onClick }: { onClick: () => void }) {
   return null;
 }
 
-/** Enquadra a região das estações assim que o mapa monta. */
-function FitToStations() {
+/**
+ * Enquadra a região das estações no mount e sempre que `recenterKey` mudar
+ * (botão "centralizar" no MapControls).
+ */
+function FitToStations({ recenterKey }: { recenterKey: number }) {
   const map = useMap();
   useEffect(() => {
-    map.fitBounds(STATIONS_BOUNDS, { padding: [50, 50], maxZoom: 13 });
-  }, [map]);
+    map.fitBounds(STATIONS_BOUNDS, { padding: [10, 10], maxZoom: 13 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, recenterKey]);
   return null;
 }
 
@@ -64,7 +75,10 @@ export default function MapView({
   riverFlow,
   hoveredLevel,
   hiddenLevels,
+  overrides,
+  recenterKey,
   onSelectStation,
+  onDragStation,
   onMapClick,
 }: MapViewProps) {
   return (
@@ -104,14 +118,16 @@ export default function MapView({
           />
         </>
       )}
-      <FitToStations />
+      <FitToStations recenterKey={recenterKey} />
       <RiversLayer flowAnimation={riverFlow} />
       <StationsLayer
         selectedId={selectedId}
         boxFormat={boxFormat}
         hoveredLevel={hoveredLevel}
         hiddenLevels={hiddenLevels}
+        overrides={overrides}
         onSelectStation={onSelectStation}
+        onDragStation={onDragStation}
       />
       <MapClickHandler onClick={onMapClick} />
     </MapContainer>
