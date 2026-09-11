@@ -15,6 +15,7 @@ import annotationPlugin from "chartjs-plugin-annotation";
 import zoomPlugin from "chartjs-plugin-zoom";
 import type { Reading } from "@/api/measurements";
 import type { ReferenceThresholds } from "@/api/parameters";
+import { formatDateTimeBR, formatTimeBR } from "@/lib/datetime";
 
 ChartJS.register(
   LineElement,
@@ -37,15 +38,9 @@ const THRESHOLD_KEYS = Object.keys(
   THRESHOLD_STYLE,
 ) as (keyof ReferenceThresholds)[];
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-const fmtTime = (ms: number) => {
-  const d = new Date(ms);
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-};
-const fmtDateTime = (ms: number) => {
-  const d = new Date(ms);
-  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)} ${fmtTime(ms)}`;
-};
+// Horário de Brasília, explícito (independe do fuso do navegador).
+const fmtTime = (ms: number) => formatTimeBR(new Date(ms));
+const fmtDateTime = (ms: number) => formatDateTimeBR(new Date(ms));
 
 interface LevelChartProps {
   readings: Reading[];

@@ -1,11 +1,17 @@
+import { useState } from "react";
 import { stationsById } from "@/data/stations";
 import { useStationStatus } from "@/hooks/useStationStatus";
 import { LEVEL_LABELS } from "@/lib/classification";
+import { formatDateTimeBR, formatFullDateTimeBR } from "@/lib/datetime";
 import { FRESHNESS_LABELS, freshnessOf } from "@/lib/freshness";
 import LevelChart from "@/components/LevelChart";
+import ReadingsTable from "@/components/ReadingsTable";
+import ViewModeToggle, { type ViewMode } from "@/components/ViewModeToggle";
 
 interface StationSidebarProps {
   stationId: number | null;
+  /** null = agora (ao vivo); data fixa = janela de 6h congelada nela. */
+  referenceDate: Date | null;
   onClose: () => void;
   /** Abre o modal com o histórico ampliado. */
   onExpand: () => void;
@@ -23,10 +29,12 @@ function trendGlyph(prev: number | undefined, last: number): string {
  */
 export default function StationSidebar({
   stationId,
+  referenceDate,
   onClose,
   onExpand,
 }: StationSidebarProps) {
-  const { byId } = useStationStatus();
+  const { byId } = useStationStatus(referenceDate);
+  const [viewMode, setViewMode] = useState<ViewMode>("chart");
 
   if (stationId == null) return null;
   const station = stationsById.get(stationId);
@@ -39,6 +47,10 @@ export default function StationSidebar({
   const freshness = last
     ? freshnessOf(last.at, station.transmissionGap)
     : null;
+
+  const chartTitle = referenceDate
+    ? `Nível — 6 h até ${formatDateTimeBR(referenceDate)}`
+    : "Nível — últimas 6 h";
 
   return (
     <aside
@@ -81,7 +93,7 @@ export default function StationSidebar({
       </div>
       {last && (
         <p className="station-sidebar__time">
-          Última leitura: {last.date}
+          Última leitura: {formatFullDateTimeBR(last.at)}
           {freshness && (
             <span
               className={`station-sidebar__fresh station-sidebar__fresh--${freshness}`}
@@ -92,13 +104,20 @@ export default function StationSidebar({
         </p>
       )}
 
-      <h3 className="station-sidebar__chart-title">Nível — últimas 6&nbsp;h</h3>
+      <div className="station-sidebar__chart-head">
+        <h3 className="station-sidebar__chart-title">{chartTitle}</h3>
+        <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+      </div>
       <div className="station-sidebar__chart">
         {series ? (
-          <LevelChart
-            readings={series.readings}
-            thresholds={status?.thresholds ?? {}}
-          />
+          viewMode === "chart" ? (
+            <LevelChart
+              readings={series.readings}
+              thresholds={status?.thresholds ?? {}}
+            />
+          ) : (
+            <ReadingsTable readings={series.readings} />
+          )
         ) : (
           <p className="level-chart__empty">Sem dados para esta estação.</p>
         )}

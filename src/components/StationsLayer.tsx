@@ -5,6 +5,7 @@ import type { StationSeries } from "@/api/measurements";
 import type { LevelClass } from "@/lib/classification";
 import { BOX_DIMS, type BoxFormat } from "@/lib/boxFormat";
 import { declutter } from "@/lib/declutter";
+import { formatFullDateTimeBR } from "@/lib/datetime";
 import type { LatLngTuple } from "@/hooks/useStationPositions";
 import { fluviometricStations } from "@/data/stations";
 import { useStationStatus } from "@/hooks/useStationStatus";
@@ -87,7 +88,7 @@ function buildIcon(
     trend = trendOf(series);
     minText = `▾${NBSP}${formatMeters(series.min)}`;
     maxText = `▴${NBSP}${formatMeters(series.max)}`;
-    title = escapeHtml(series.last.date);
+    title = escapeHtml(formatFullDateTimeBR(series.last.at));
   }
 
   const mainParts = [
@@ -151,6 +152,8 @@ interface StationsLayerProps {
   hiddenLevels: Set<LevelClass>;
   /** Posições ajustadas manualmente (arrastadas) — vencem o layout automático. */
   overrides: Record<number, LatLngTuple>;
+  /** null = agora (ao vivo); data fixa = janela de 6h congelada nela. */
+  referenceDate: Date | null;
   onSelectStation: (stationId: number) => void;
   /** Usuário soltou a caixa numa nova posição — persistir. */
   onDragStation: (stationId: number, pos: LatLngTuple) => void;
@@ -162,11 +165,12 @@ export default function StationsLayer({
   hoveredLevel,
   hiddenLevels,
   overrides,
+  referenceDate,
   onSelectStation,
   onDragStation,
 }: StationsLayerProps) {
   const map = useMap();
-  const { byId } = useStationStatus();
+  const { byId } = useStationStatus(referenceDate);
   const [autoPos, setAutoPos] = useState<Map<number, LatLngTuple>>(new Map());
 
   // Recalcula o anti-overlap em espaço de tela e converte de volta p/ lat/lng.

@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import MapView from "@/components/MapView";
+import AppTitleMenu from "@/components/AppTitleMenu";
 import BaseLayerSwitcher from "@/components/BaseLayerSwitcher";
 import MapControls from "@/components/MapControls";
 import MapDateCard from "@/components/MapDateCard";
@@ -17,6 +18,10 @@ export default function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [recenterTick, setRecenterTick] = useState(0);
+  const [mapClickTick, setMapClickTick] = useState(0);
+  // null = agora (ao vivo); data fixa = janela de 6h congelada nela. Só o
+  // mapa e a sidebar respeitam isso — o modal mantém sua própria lógica.
+  const [referenceDate, setReferenceDate] = useState<Date | null>(null);
   const { settings, setSetting } = useSettings();
   const {
     overrides: stationOverrides,
@@ -43,11 +48,22 @@ export default function App() {
     setSelectedId(null);
   };
 
+  // Clique em área vazia do mapa: fecha o sidebar da estação e sinaliza o
+  // popover de data (que se fecha ao observar o closeSignal mudar).
+  const handleMapClick = () => {
+    closeStation();
+    setMapClickTick((t) => t + 1);
+  };
+
   return (
     <div className="app-shell">
-      <h1 className="app-title">SIBH – Diagrama Tietê / Pinheiros</h1>
-      <RefreshBar />
-      <MapDateCard />
+      <AppTitleMenu />
+      <RefreshBar referenceDate={referenceDate} />
+      <MapDateCard
+        referenceDate={referenceDate}
+        onChange={setReferenceDate}
+        closeSignal={mapClickTick}
+      />
 
       <MapView
         selectedId={selectedId}
@@ -57,10 +73,11 @@ export default function App() {
         hoveredLevel={hoveredLevel}
         hiddenLevels={hiddenLevels}
         overrides={stationOverrides}
+        referenceDate={referenceDate}
         recenterKey={recenterTick}
         onSelectStation={setSelectedId}
         onDragStation={setStationPosition}
-        onMapClick={closeStation}
+        onMapClick={handleMapClick}
       />
 
       <MapControls
@@ -89,6 +106,7 @@ export default function App() {
       />
       <StationSidebar
         stationId={selectedId}
+        referenceDate={referenceDate}
         onClose={closeStation}
         onExpand={() => setModalOpen(true)}
       />

@@ -35,6 +35,8 @@ interface MapViewProps {
   hiddenLevels: Set<LevelClass>;
   /** Posições ajustadas manualmente (arrastadas) — vencem o layout automático. */
   overrides: Record<number, LatLngTuple>;
+  /** null = agora (ao vivo); data fixa = janela de 6h congelada nela. */
+  referenceDate: Date | null;
   /** Muda (incrementa) para forçar um novo fitBounds — botão "centralizar". */
   recenterKey: number;
   onSelectStation: (stationId: number) => void;
@@ -76,6 +78,7 @@ export default function MapView({
   hoveredLevel,
   hiddenLevels,
   overrides,
+  referenceDate,
   recenterKey,
   onSelectStation,
   onDragStation,
@@ -126,6 +129,7 @@ export default function MapView({
         hoveredLevel={hoveredLevel}
         hiddenLevels={hiddenLevels}
         overrides={overrides}
+        referenceDate={referenceDate}
         onSelectStation={onSelectStation}
         onDragStation={onDragStation}
       />

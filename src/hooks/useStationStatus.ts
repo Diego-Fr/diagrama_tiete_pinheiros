@@ -18,9 +18,12 @@ export interface StationStatus {
  * Estado atual de cada estação fluviométrica: série de medições + classificação
  * do nível. Fonte única — a cor da caixa no mapa e usos futuros (listas,
  * filtros, resumos) devem consumir daqui.
+ *
+ * `referenceDate` = null → "agora" (ao vivo); uma data fixa congela a janela
+ * de 6h nesse instante (ver `useMeasurements`).
  */
-export function useStationStatus() {
-  const measurements = useMeasurements(fluviometricIds);
+export function useStationStatus(referenceDate: Date | null = null) {
+  const measurements = useMeasurements(fluviometricIds, referenceDate);
   const parameters = useParameters(fluviometricIds);
 
   const byId = useMemo(() => {

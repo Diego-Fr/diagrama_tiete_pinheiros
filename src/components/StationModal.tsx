@@ -5,6 +5,8 @@ import { useStationHistory } from "@/hooks/useStationHistory";
 import { useStationStatus } from "@/hooks/useStationStatus";
 import DateRangeControl from "@/components/DateRangeControl";
 import LevelChart from "@/components/LevelChart";
+import ReadingsTable from "@/components/ReadingsTable";
+import ViewModeToggle, { type ViewMode } from "@/components/ViewModeToggle";
 
 interface StationModalProps {
   stationId: number;
@@ -28,6 +30,7 @@ export default function StationModal({ stationId, onClose }: StationModalProps) 
     };
   });
 
+  const [viewMode, setViewMode] = useState<ViewMode>("chart");
   const { byId } = useStationStatus();
   const history = useStationHistory(
     stationId,
@@ -86,15 +89,24 @@ export default function StationModal({ stationId, onClose }: StationModalProps) 
           </button>
         </header>
 
+        <div className="station-modal__toolbar">
+          <span className="station-modal__toolbar-label">Nível</span>
+          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+        </div>
+
         <div className="station-modal__chart">
           {history.isError ? (
             <p className="level-chart__empty">Falha ao carregar o histórico.</p>
           ) : series ? (
-            <LevelChart
-              readings={series.readings}
-              thresholds={thresholds}
-              wide
-            />
+            viewMode === "chart" ? (
+              <LevelChart
+                readings={series.readings}
+                thresholds={thresholds}
+                wide
+              />
+            ) : (
+              <ReadingsTable readings={series.readings} />
+            )
           ) : !loading ? (
             <p className="level-chart__empty">
               Sem dados no intervalo selecionado.

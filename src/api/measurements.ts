@@ -1,4 +1,5 @@
 import { API_BASE } from "@/api/base";
+import { parseApiUtcDate } from "@/lib/datetime";
 
 /** Registro cru de `/sibh/api/v2/measurements`. */
 export interface RawMeasurement {
@@ -10,7 +11,7 @@ export interface RawMeasurement {
   value: number | null;
   read_value: number | null;
   measurement_id: string;
-  /** "YYYY/MM/DD HH:mm" em horário local. */
+  /** "YYYY/MM/DD HH:mm" — em UTC (ver `parseApiUtcDate`). */
   date: string;
 }
 
@@ -59,13 +60,6 @@ function chunk<T>(items: T[], size: number): T[][] {
     out.push(items.slice(i, i + size));
   }
   return out;
-}
-
-function parseApiDate(value: string): Date {
-  const [datePart = "", timePart = "00:00"] = value.split(" ");
-  const [y, m, d] = datePart.split("/").map(Number);
-  const [hh, mm] = timePart.split(":").map(Number);
-  return new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0);
 }
 
 async function fetchBatch(
@@ -119,7 +113,7 @@ export async function fetchSeriesInRange(
     if (!Number.isFinite(id)) continue;
 
     const list = readingsByStation.get(id) ?? [];
-    list.push({ value: m.value, date: m.date, at: parseApiDate(m.date) });
+    list.push({ value: m.value, date: m.date, at: parseApiUtcDate(m.date) });
     readingsByStation.set(id, list);
   }
 
@@ -152,18 +146,21 @@ export async function fetchSeriesInRange(
 }
 
 /**
- * Série das estações na janela padrão (`LOOKBACK_MS` atrás → agora). Usada no
- * carregamento do mapa; a sidebar reaproveita essas leituras sem nova busca.
+ * Série das estações na janela padrão (`LOOKBACK_MS` antes de `referenceDate`
+ * até `referenceDate`). Usada no carregamento do mapa; a sidebar reaproveita
+ * essas leituras sem nova busca. `referenceDate` é "agora" por padrão, mas o
+ * usuário pode fixar outro instante (seletor de data).
  */
 export function fetchStationSeries(
   stationIds: number[],
+  referenceDate: Date = new Date(),
   signal?: AbortSignal,
 ): Promise<Map<number, StationSeries>> {
-  const now = Date.now();
+  const end = referenceDate.getTime();
   return fetchSeriesInRange(
     stationIds,
-    new Date(now - LOOKBACK_MS).toISOString(),
-    new Date(now).toISOString(),
+    new Date(end - LOOKBACK_MS).toISOString(),
+    new Date(end).toISOString(),
     "minute",
     signal,
   );
