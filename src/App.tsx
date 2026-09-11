@@ -45,6 +45,7 @@ export default function App() {
         selectedId={selectedId}
         boxFormat={settings.boxFormat}
         baseLayer={settings.baseLayer}
+        riverFlow={settings.riverFlowAnimation}
         hoveredLevel={hoveredLevel}
         hiddenLevels={hiddenLevels}
         onSelectStation={setSelectedId}
@@ -66,6 +67,8 @@ export default function App() {
         onClose={() => setSettingsOpen(false)}
         format={settings.boxFormat}
         onFormatChange={(f) => setSetting("boxFormat", f)}
+        riverFlow={settings.riverFlowAnimation}
+        onRiverFlowChange={(v) => setSetting("riverFlowAnimation", v)}
       />
       <StationSidebar
         stationId={selectedId}

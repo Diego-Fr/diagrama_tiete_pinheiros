@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { MapContainer, TileLayer, useMap, useMapEvent } from "react-leaflet";
 import L from "leaflet";
+import RiversLayer from "@/components/RiversLayer";
 import StationsLayer from "@/components/StationsLayer";
 import type { BoxFormat } from "@/lib/boxFormat";
 import type { LevelClass } from "@/lib/classification";
@@ -28,6 +29,7 @@ interface MapViewProps {
   selectedId: number | null;
   boxFormat: BoxFormat;
   baseLayer: BaseLayerId;
+  riverFlow: boolean;
   hoveredLevel: LevelClass | null;
   hiddenLevels: Set<LevelClass>;
   onSelectStation: (stationId: number) => void;
@@ -59,6 +61,7 @@ export default function MapView({
   selectedId,
   boxFormat,
   baseLayer,
+  riverFlow,
   hoveredLevel,
   hiddenLevels,
   onSelectStation,
@@ -102,6 +105,7 @@ export default function MapView({
         </>
       )}
       <FitToStations />
+      <RiversLayer flowAnimation={riverFlow} />
       <StationsLayer
         selectedId={selectedId}
         boxFormat={boxFormat}

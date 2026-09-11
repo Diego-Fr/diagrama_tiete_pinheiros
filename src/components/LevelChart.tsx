@@ -169,15 +169,21 @@ export default function LevelChart({
           },
         },
         annotation: { annotations },
-        // zoom só no modal e só no eixo X — o eixo Y (com os limiares) nunca muda
+        // zoom só no modal e só no eixo X — o eixo Y (com os limiares) nunca muda.
+        // Zoom por caixa de seleção (click + drag), não por scroll.
         zoom: wide
           ? {
-              pan: { enabled: true, mode: "x" },
+              pan: { enabled: false },
               zoom: {
                 mode: "x",
-                wheel: { enabled: true },
-                pinch: { enabled: true },
-                drag: { enabled: true, modifierKey: "shift" },
+                wheel: { enabled: false },
+                pinch: { enabled: false },
+                drag: {
+                  enabled: true,
+                  backgroundColor: "rgba(3,105,161,0.15)",
+                  borderColor: "#0369a1",
+                  borderWidth: 1,
+                },
               },
               limits: { x: { min: "original", max: "original" } },
             }

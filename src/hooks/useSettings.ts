@@ -8,9 +8,15 @@ const BASE_LAYERS: BaseLayerId[] = ["gray", "satellite"];
 export interface Settings {
   boxFormat: BoxFormat;
   baseLayer: BaseLayerId;
+  /** Anima o sentido da vazão do rio (faixa "correndo"). */
+  riverFlowAnimation: boolean;
 }
 
-const DEFAULTS: Settings = { boxFormat: "default", baseLayer: "gray" };
+const DEFAULTS: Settings = {
+  boxFormat: "default",
+  baseLayer: "gray",
+  riverFlowAnimation: true,
+};
 const STORAGE_KEY = "diagrama-tiete:settings";
 
 function load(): Settings {
@@ -25,6 +31,10 @@ function load(): Settings {
       baseLayer: (BASE_LAYERS as string[]).includes(parsed.baseLayer as string)
         ? (parsed.baseLayer as BaseLayerId)
         : DEFAULTS.baseLayer,
+      riverFlowAnimation:
+        typeof parsed.riverFlowAnimation === "boolean"
+          ? parsed.riverFlowAnimation
+          : DEFAULTS.riverFlowAnimation,
     };
   } catch {
     return DEFAULTS;
