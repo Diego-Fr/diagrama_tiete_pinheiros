@@ -30,7 +30,7 @@ export interface StationPoint {
   /** Texto exibido no topo da caixa. */
   prefix: string;
   kind: StationKind;
-  /** Intervalo de transmissão esperado (min) — base do indicador de atraso. */
-  transmissionGap: number;
+  /** Intervalo de medição esperado (min) — base do indicador de atraso. */
+  measurementGap: number;
   raw: RawStation;
 }

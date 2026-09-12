@@ -44,3 +44,21 @@ export function formatFullDateTimeBR(date: Date): string {
     minute: "2-digit",
   });
 }
+
+/**
+ * "2026-09-11_1432" (horário de Brasília) — sem barras/dois-pontos, seguro
+ * pra nome de arquivo (usado no download do print do mapa).
+ */
+export function formatFileStampBR(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}_${get("hour")}${get("minute")}`;
+}

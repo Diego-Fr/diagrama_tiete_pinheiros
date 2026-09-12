@@ -4,17 +4,24 @@ interface MapControlsProps {
   onResetPositions: () => void;
   /** Desabilita o botão de resetar quando não há caixa arrastada manualmente. */
   hasCustomPositions: boolean;
+  /** Baixa um print (PNG) do mapa como está agora. */
+  onCapture: () => void;
+  /** Captura em andamento — desabilita o botão e troca o ícone por um spinner. */
+  capturing: boolean;
 }
 
 /**
  * Botões abaixo do controle de zoom do Leaflet: configurações, centralizar o
- * mapa no enquadramento inicial e resetar as caixas arrastadas manualmente.
+ * mapa no enquadramento inicial, resetar as caixas arrastadas manualmente e
+ * baixar um print do mapa.
  */
 export default function MapControls({
   onOpenSettings,
   onRecenter,
   onResetPositions,
   hasCustomPositions,
+  onCapture,
+  capturing,
 }: MapControlsProps) {
   return (
     <div className="map-controls">
@@ -90,6 +97,48 @@ export default function MapControls({
           <path d="M3 12a9 9 0 1 0 3-6.7" />
           <path d="M3 4v5h5" />
         </svg>
+      </button>
+
+      <span className="map-controls__sep" />
+
+      <button
+        type="button"
+        className="map-controls__btn"
+        onClick={onCapture}
+        disabled={capturing}
+        aria-label="Baixar imagem do mapa"
+        title="Baixar imagem do mapa"
+      >
+        {capturing ? (
+          <svg
+            className="map-controls__spinner"
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M12 3a9 9 0 1 0 9 9" />
+          </svg>
+        ) : (
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+            <circle cx="12" cy="14" r="3.5" />
+          </svg>
+        )}
       </button>
     </div>
   );

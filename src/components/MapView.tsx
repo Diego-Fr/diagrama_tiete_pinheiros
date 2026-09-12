@@ -96,13 +96,22 @@ export default function MapView({
       zoomControl
       attributionControl={false}
     >
+      {/* crossOrigin: Esri manda Access-Control-Allow-Origin: * — habilitar
+          deixa o print do mapa (html-to-image) embutir os tiles sem "sujar"
+          o canvas. */}
       {baseLayer === "satellite" ? (
         <>
-          <TileLayer key="sat" url={SATELLITE_TILE_URL} maxZoom={MAX_ZOOM} />
+          <TileLayer
+            key="sat"
+            url={SATELLITE_TILE_URL}
+            maxZoom={MAX_ZOOM}
+            crossOrigin="anonymous"
+          />
           <TileLayer
             key="sat-labels"
             url={SATELLITE_LABELS_URL}
             maxZoom={MAX_ZOOM}
+            crossOrigin="anonymous"
           />
         </>
       ) : (
@@ -112,12 +121,14 @@ export default function MapView({
             url={BASEMAP_TILE_URL}
             maxZoom={MAX_ZOOM}
             maxNativeZoom={BASEMAP_MAX_NATIVE_ZOOM}
+            crossOrigin="anonymous"
           />
           <TileLayer
             key="gray-labels"
             url={BASEMAP_LABELS_URL}
             maxZoom={MAX_ZOOM}
             maxNativeZoom={BASEMAP_MAX_NATIVE_ZOOM}
+            crossOrigin="anonymous"
           />
         </>
       )}

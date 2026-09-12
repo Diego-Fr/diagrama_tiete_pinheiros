@@ -32,12 +32,13 @@ function toKind(typeId: number): StationKind {
   return "outro";
 }
 
-/** Gap de transmissão em minutos; cai para measurement_gap e por fim 10. */
-function toTransmissionGap(raw: RawStation): number {
-  const t = Number(raw.transmission_gap);
-  if (Number.isFinite(t) && t > 0) return t;
+/** Gap de medição em minutos (base do indicador de atraso); cai para
+ * transmission_gap e por fim 10 quando ausente/inválido. */
+function toMeasurementGap(raw: RawStation): number {
   const m = Number(raw.measurement_gap);
   if (Number.isFinite(m) && m > 0) return m;
+  const t = Number(raw.transmission_gap);
+  if (Number.isFinite(t) && t > 0) return t;
   return 10;
 }
 
@@ -57,7 +58,7 @@ export const stations: StationPoint[] = (rawStations as unknown as RawStation[])
     lng: r.longitude,
     prefix: toDisplayPrefix(r),
     kind: toKind(r.station_type_id),
-    transmissionGap: toTransmissionGap(r),
+    measurementGap: toMeasurementGap(r),
     raw: r,
   }));
 

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import MapView from "@/components/MapView";
 import AppTitleMenu from "@/components/AppTitleMenu";
 import BaseLayerSwitcher from "@/components/BaseLayerSwitcher";
@@ -10,15 +10,34 @@ import SettingsSidebar from "@/components/SettingsSidebar";
 import StationSidebar from "@/components/StationSidebar";
 import StationModal from "@/components/StationModal";
 import type { LevelClass } from "@/lib/classification";
+import { formatFileStampBR } from "@/lib/datetime";
+import { downloadElementAsPng } from "@/lib/mapSnapshot";
 import { useSettings } from "@/hooks/useSettings";
 import { useStationPositions } from "@/hooks/useStationPositions";
 
+/** Espera 2 frames — deixa o React aplicar (e o navegador pintar) os ajustes
+ * de "modo captura" (esconder controles, congelar a data) antes do print. */
+function waitTwoFrames(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
 export default function App() {
+  const shellRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [recenterTick, setRecenterTick] = useState(0);
   const [mapClickTick, setMapClickTick] = useState(0);
+  // Print do mapa (botão de câmera): enquanto true, esconde controles de UI
+  // (zoom/config/base layer) e trava a animação dos rios via CSS/props —
+  // ver `.app-shell--capturing` e o `riverFlow` repassado ao MapView.
+  const [capturing, setCapturing] = useState(false);
+  // "AGORA" não faz sentido numa imagem estática — durante o print, mostra a
+  // data/hora reais resolvidas (a de referência, se houver, senão o instante
+  // do clique) no lugar do rótulo relativo.
+  const [captureAsOf, setCaptureAsOf] = useState<Date | null>(null);
   // null = agora (ao vivo); data fixa = janela de 6h congelada nela. Só o
   // mapa e a sidebar respeitam isso — o modal mantém sua própria lógica.
   const [referenceDate, setReferenceDate] = useState<Date | null>(null);
@@ -55,21 +74,45 @@ export default function App() {
     setMapClickTick((t) => t + 1);
   };
 
+  const handleCapture = useCallback(async () => {
+    if (capturing || !shellRef.current) return;
+    const asOf = referenceDate ?? new Date();
+    setCaptureAsOf(asOf);
+    setCapturing(true);
+    try {
+      // deixa o React re-renderizar sem os controles/animação antes do print
+      await waitTwoFrames();
+      await downloadElementAsPng(
+        shellRef.current,
+        `sibh-tiete-pinheiros-${formatFileStampBR(asOf)}.png`,
+      );
+    } catch (err) {
+      console.error("Falha ao gerar a imagem do mapa:", err);
+    } finally {
+      setCapturing(false);
+      setCaptureAsOf(null);
+    }
+  }, [capturing, referenceDate]);
+
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell${capturing ? " app-shell--capturing" : ""}`}
+      ref={shellRef}
+    >
       <AppTitleMenu />
       <RefreshBar referenceDate={referenceDate} />
       <MapDateCard
         referenceDate={referenceDate}
         onChange={setReferenceDate}
         closeSignal={mapClickTick}
+        captureAsOf={captureAsOf}
       />
 
       <MapView
         selectedId={selectedId}
         boxFormat={settings.boxFormat}
         baseLayer={settings.baseLayer}
-        riverFlow={settings.riverFlowAnimation}
+        riverFlow={capturing ? false : settings.riverFlowAnimation}
         hoveredLevel={hoveredLevel}
         hiddenLevels={hiddenLevels}
         overrides={stationOverrides}
@@ -85,6 +128,8 @@ export default function App() {
         onRecenter={() => setRecenterTick((t) => t + 1)}
         onResetPositions={resetStationPositions}
         hasCustomPositions={Object.keys(stationOverrides).length > 0}
+        onCapture={handleCapture}
+        capturing={capturing}
       />
       <BaseLayerSwitcher
         value={settings.baseLayer}

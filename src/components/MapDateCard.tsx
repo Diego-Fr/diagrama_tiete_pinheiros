@@ -7,6 +7,12 @@ interface MapDateCardProps {
   onChange: (date: Date | null) => void;
   /** Muda (incrementa) para fechar o popover — clique no mapa vazio. */
   closeSignal: number;
+  /**
+   * Durante o print do mapa: mostra esta data no lugar de "AGORA" — a
+   * imagem baixada precisa de uma data concreta, não de um rótulo relativo.
+   * Não afeta o modo ao vivo de fato, só o texto exibido.
+   */
+  captureAsOf?: Date | null;
 }
 
 function toInputValue(d: Date): string {
@@ -26,6 +32,7 @@ export default function MapDateCard({
   referenceDate,
   onChange,
   closeSignal,
+  captureAsOf,
 }: MapDateCardProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(() =>
@@ -43,7 +50,11 @@ export default function MapDateCard({
   }, [closeSignal]);
 
   const isLive = referenceDate == null;
-  const label = isLive ? "AGORA" : formatDateTimeBR(referenceDate);
+  const label = captureAsOf
+    ? formatDateTimeBR(captureAsOf)
+    : isLive
+      ? "AGORA"
+      : formatDateTimeBR(referenceDate);
 
   function apply() {
     const picked = new Date(draft);

@@ -1,13 +1,11 @@
 import type { Reading } from "@/api/measurements";
+import TrendArrow from "@/components/TrendArrow";
 import { formatFullDateTimeBR } from "@/lib/datetime";
+import type { Trend } from "@/lib/trendIcons";
 
 interface ReadingsTableProps {
   readings: Reading[];
 }
-
-type Trend = "up" | "down" | "flat";
-
-const TREND_GLYPH: Record<Trend, string> = { up: "↑", down: "↓", flat: "=" };
 
 /** Leituras do posto (mais recente primeiro), formato alternativo ao gráfico. */
 export default function ReadingsTable({ readings }: ReadingsTableProps) {
@@ -43,7 +41,7 @@ export default function ReadingsTable({ readings }: ReadingsTableProps) {
                   {(r.value / 100).toFixed(3)}
                 </td>
                 <td className={`readings-table__trend readings-table__trend--${trend}`}>
-                  {TREND_GLYPH[trend]}
+                  <TrendArrow trend={trend} size={15} />
                 </td>
               </tr>
             );

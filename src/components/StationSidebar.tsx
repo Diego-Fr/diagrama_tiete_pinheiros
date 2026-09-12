@@ -3,9 +3,11 @@ import { stationsById } from "@/data/stations";
 import { useStationStatus } from "@/hooks/useStationStatus";
 import { LEVEL_LABELS } from "@/lib/classification";
 import { formatDateTimeBR, formatFullDateTimeBR } from "@/lib/datetime";
-import { FRESHNESS_LABELS, freshnessOf } from "@/lib/freshness";
+import { FRESHNESS_LABELS } from "@/lib/freshness";
+import type { Trend } from "@/lib/trendIcons";
 import LevelChart from "@/components/LevelChart";
 import ReadingsTable from "@/components/ReadingsTable";
+import TrendArrow from "@/components/TrendArrow";
 import ViewModeToggle, { type ViewMode } from "@/components/ViewModeToggle";
 
 interface StationSidebarProps {
@@ -17,9 +19,9 @@ interface StationSidebarProps {
   onExpand: () => void;
 }
 
-function trendGlyph(prev: number | undefined, last: number): string {
-  if (prev == null || last === prev) return "=";
-  return last > prev ? "↑" : "↓";
+function trendOf(prev: number | undefined, last: number): Trend {
+  if (prev == null || last === prev) return "flat";
+  return last > prev ? "up" : "down";
 }
 
 /**
@@ -44,9 +46,7 @@ export default function StationSidebar({
   const series = status?.series ?? null;
   const classification = status?.classification ?? "normal";
   const last = series?.last ?? null;
-  const freshness = last
-    ? freshnessOf(last.at, station.transmissionGap)
-    : null;
+  const freshness = status?.freshness ?? null;
 
   const chartTitle = referenceDate
     ? `Nível — 6 h até ${formatDateTimeBR(referenceDate)}`
@@ -83,8 +83,13 @@ export default function StationSidebar({
           <small>m</small>
         </span>
         {last && series && (
-          <span className="station-sidebar__trend">
-            {trendGlyph(series.previous?.value, last.value)}
+          <span
+            className={`station-sidebar__trend station-sidebar__trend--${trendOf(
+              series.previous?.value,
+              last.value,
+            )}`}
+          >
+            <TrendArrow trend={trendOf(series.previous?.value, last.value)} size={22} />
           </span>
         )}
         <span className="station-sidebar__badge">

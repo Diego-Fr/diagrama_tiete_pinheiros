@@ -7,12 +7,12 @@ export const FRESHNESS_LABELS: Record<Freshness, string> = {
 };
 
 /**
- * Situação do dado a partir da data da última medição vs. o `transmission_gap`
- * da estação (minutos):
- *   diff < gap      → "updated"
- *   diff < gap * 2  → "waiting"
- *   senão           → "delayed"
- * `diff` = minutos de agora até a última medição.
+ * Situação do dado a partir da data da última medição vs. o `measurement_gap`
+ * da estação (minutos — intervalo esperado entre medições):
+ *   diff <= gap          → "updated"
+ *   gap < diff <= gap*2  → "waiting"
+ *   diff > gap*2         → "delayed"
+ * `diff` = minutos entre `now` e a última medição.
  */
 export function freshnessOf(
   lastAt: Date,
@@ -20,7 +20,7 @@ export function freshnessOf(
   now: Date = new Date(),
 ): Freshness {
   const diffMin = (now.getTime() - lastAt.getTime()) / 60_000;
-  if (diffMin < gapMinutes) return "updated";
-  if (diffMin < gapMinutes * 2) return "waiting";
+  if (diffMin <= gapMinutes) return "updated";
+  if (diffMin <= gapMinutes * 2) return "waiting";
   return "delayed";
 }

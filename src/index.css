@@ -32,6 +32,16 @@ body {
   height: 100%;
 }
 
+/* Enquanto o print do mapa é gerado (botão de câmera): some com o que é
+   controle de interface, não conteúdo do mapa — zoom, o grupo de botões
+   embaixo dele e o seletor de camada base. Título, card de data (com a data
+   resolvida) e legenda continuam, dão contexto na imagem baixada. */
+.app-shell--capturing .leaflet-control-zoom,
+.app-shell--capturing .map-controls,
+.app-shell--capturing .baselayer-switcher {
+  display: none !important;
+}
+
 /* Título sobre o mapa, num card branco que simula um select — clicar abre a
    lista de diagramas disponíveis (por enquanto só um). */
 .app-title-menu {
@@ -39,11 +49,15 @@ body {
   top: 12px;
   left: 56px;
   z-index: 1200;
+  /* Encolhe antes de encavalar com o card de data no canto oposto — a
+     largura reservada pra ele (~150px) + as margens dos dois lados. */
+  max-width: calc(100vw - 220px);
 }
 .app-title-menu__trigger {
   display: flex;
   align-items: center;
   gap: 10px;
+  max-width: 100%;
   padding: 8px 14px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
@@ -55,6 +69,9 @@ body {
   background: #f8fafc;
 }
 .app-title-menu__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -70,6 +87,7 @@ body {
   top: calc(100% + 8px);
   left: 0;
   min-width: 100%;
+  max-width: min(320px, calc(100vw - 24px));
   margin: 0;
   padding: 6px;
   list-style: none;
@@ -89,7 +107,7 @@ body {
   font-size: 13px;
   font-weight: 600;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
   cursor: pointer;
 }
 .app-title-menu__item:hover {
@@ -102,12 +120,48 @@ body {
 
 /* ---- Caixa de posto (DivIcon) ---- */
 
-/* Neutraliza o visual padrão do .leaflet-div-icon (fundo branco + borda). */
+/* Neutraliza o visual padrão do .leaflet-div-icon (fundo branco + borda).
+   NÃO define `position` aqui — este é o próprio elemento `.leaflet-marker-icon`
+   e o Leaflet exige `position:absolute` nele (leaflet.css) para posicionar via
+   transform; sobrescrever para `relative` quebra o posicionamento de todas as
+   caixas. O contexto de posição do selo de atraso é `.station-box-inner`. */
 .station-box-wrapper {
   background: transparent;
   border: none;
   /* desbota suave quando a legenda destaca outro nível (Marker.setOpacity) */
   transition: opacity 140ms ease;
+}
+
+/* Wrapper interno (não é o elemento posicionado pelo Leaflet) — só para dar
+   contexto de posicionamento ao selo de atraso. */
+.station-box-inner {
+  position: relative;
+}
+
+/* Selo de atraso — flutua no canto sup. direito da caixa, meio pra fora. */
+.station-box__freshness {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  color: #fff;
+  z-index: 5;
+}
+.station-box__freshness--waiting {
+  /* amarelo, não laranja — laranja passava urgência demais pra um estado
+     que só significa "meio atrasado, ainda dentro do esperado". */
+  background: #eab308;
+  color: #422006; /* ícone escuro — branco não tem contraste no amarelo */
+}
+.station-box__freshness--delayed {
+  background: #dc2626;
 }
 
 .station-box {
@@ -184,7 +238,7 @@ body {
   min-width: 50%;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   padding: 0 5px;
   font-variant-numeric: tabular-nums;
 }
@@ -409,9 +463,16 @@ body {
   color: #16a34a;
 }
 .station-sidebar__trend {
-  font-size: 20px;
-  font-weight: 700;
-  color: #64748b;
+  display: flex;
+  align-items: center;
+  color: #8b8d98;
+}
+/* mesma paleta da caixa no mapa: sobe = vermelho, desce = verde */
+.station-sidebar__trend--up {
+  color: #e5484d;
+}
+.station-sidebar__trend--down {
+  color: #2f9e44;
 }
 .station-sidebar__badge {
   margin-left: auto;
@@ -823,8 +884,10 @@ body {
   top: calc(100% + 8px);
   right: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
+  max-width: calc(100vw - 24px);
   padding: 10px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
@@ -904,6 +967,14 @@ body {
 }
 .map-controls__btn:disabled:hover {
   background: transparent;
+}
+/* botão de print desabilitado só porque está capturando — mantém o spinner
+   visível em vez de acinzentar como um botão desabilitado "de verdade". */
+.map-controls__btn:disabled .map-controls__spinner {
+  color: #475569;
+}
+.map-controls__spinner {
+  animation: spin 0.8s linear infinite;
 }
 .map-controls__sep {
   height: 1px;
@@ -1352,14 +1423,125 @@ body {
 }
 .readings-table__trend {
   text-align: center;
-  font-weight: 700;
 }
-.readings-table__trend--up {
+.readings-table__trend svg {
+  display: block;
+  margin: 0 auto;
+}
+/* especificidade dupla (.readings-table__trend + o modificador) de propósito
+   — precisa bater a regra genérica `.readings-table tbody td { color }`
+   acima, que sozinha tem mais peso que uma classe única e apagava a cor. */
+.readings-table__trend.readings-table__trend--up {
   color: #e5484d;
 }
-.readings-table__trend--down {
+.readings-table__trend.readings-table__trend--down {
   color: #2f9e44;
 }
-.readings-table__trend--flat {
+.readings-table__trend.readings-table__trend--flat {
   color: #8b8d98;
+}
+
+/* ===========================================================================
+   Responsividade — telas estreitas
+   Título+data (topo), legenda+camada base (rodapé) e cabeçalho do modal
+   encavalavam em janelas menores; ajustes abaixo fazem cada um encolher ou
+   quebrar linha antes de colidir com o vizinho. Ver screenshots/responsive/
+   (scripts/responsive-screenshots.mjs) pros antes/depois.
+   =========================================================================== */
+@media (max-width: 760px) {
+  /* Card de data encolhe (padding/fonte) — dá mais fôlego pro título ao lado. */
+  .map-datecard-wrap {
+    top: 8px;
+    right: 8px;
+  }
+  .map-datecard__date {
+    padding: 6px 9px;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .map-datecard__now {
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .app-title-menu {
+    top: 8px;
+    left: 48px;
+    max-width: calc(100vw - 170px);
+  }
+  .app-title-menu__trigger {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .app-title-menu__label {
+    font-size: 13px;
+  }
+
+  /* Legenda quebra em várias linhas em vez de vazar pra fora da tela, e sobe
+     pra não ficar atrás do seletor de camada base (ambos no rodapé). */
+  .map-legend {
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: calc(100vw - 16px);
+    bottom: 78px;
+    gap: 4px;
+    padding: 5px;
+  }
+  .map-legend__item {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+
+  .baselayer-switcher {
+    bottom: 8px;
+    left: 8px;
+  }
+  .baselayer-switcher__toggle {
+    width: 52px;
+    height: 52px;
+  }
+
+  /* Cabeçalho do modal: nome+fechar numa linha, seletor de período quebra
+     pra linha de baixo em vez de estourar a largura do painel. */
+  .station-modal__head {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  .station-modal__title {
+    order: 1;
+    flex: 1 1 140px;
+  }
+  .station-modal__close {
+    order: 2;
+  }
+  .date-range {
+    order: 3;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-title-menu {
+    max-width: calc(100vw - 132px);
+  }
+  .app-title-menu__label {
+    font-size: 12px;
+  }
+  .map-datecard__date {
+    padding: 6px 8px;
+  }
+  .map-datecard__date span {
+    max-width: 30vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .map-legend {
+    bottom: 70px;
+  }
+  .map-legend__item {
+    padding: 4px 8px;
+    font-size: 9px;
+  }
 }

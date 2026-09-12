@@ -6,6 +6,8 @@ import type { LevelClass } from "@/lib/classification";
 import { BOX_DIMS, type BoxFormat } from "@/lib/boxFormat";
 import { declutter } from "@/lib/declutter";
 import { formatFullDateTimeBR } from "@/lib/datetime";
+import { FRESHNESS_LABELS, type Freshness } from "@/lib/freshness";
+import { TREND_PATHS, type Trend } from "@/lib/trendIcons";
 import type { LatLngTuple } from "@/hooks/useStationPositions";
 import { fluviometricStations } from "@/data/stations";
 import { useStationStatus } from "@/hooks/useStationStatus";
@@ -14,8 +16,6 @@ import { useStationStatus } from "@/hooks/useStationStatus";
 function formatMeters(centimeters: number): string {
   return (centimeters / 100).toFixed(3);
 }
-
-type Trend = "up" | "down" | "flat";
 
 /** Tendência simples: penúltima leitura vs. última. */
 function trendOf(series: StationSeries): Trend {
@@ -27,12 +27,18 @@ function trendOf(series: StationSeries): Trend {
 /**
  * Setas como SVG (não glifo de fonte) — assim `align-items: center` do flex
  * centraliza de fato, sem o deslocamento vertical que ↑/↓ têm em cada fonte.
+ * Mesmo desenho (`TREND_PATHS`) usado pelo `<TrendArrow>` React (sidebar,
+ * modal, tabela) — só o wrapper muda (string HTML aqui, JSX lá).
  */
 const TREND_SVG: Record<Trend, string> = {
-  up: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
-  down: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
-  flat: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10h12M6 14h12"/></svg>',
+  up: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${TREND_PATHS.up}"/></svg>`,
+  down: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${TREND_PATHS.down}"/></svg>`,
+  flat: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${TREND_PATHS.flat}"/></svg>`,
 };
+
+/** Ponto de exclamação flutuante no canto sup. direito — atraso do dado. */
+const FRESHNESS_BADGE_SVG =
+  '<svg viewBox="0 0 24 24" width="9" height="9" fill="currentColor"><path d="M10.8 4h2.4l-.5 11h-1.4L10.8 4z"/><circle cx="12" cy="19" r="1.7"/></svg>';
 
 function escapeHtml(value: string): string {
   return value.replace(
@@ -64,6 +70,7 @@ function buildIcon(
   name: string,
   series: StationSeries | null,
   classification: LevelClass,
+  freshness: Freshness | null,
   selected: boolean,
   format: BoxFormat,
 ): L.DivIcon {
@@ -127,12 +134,21 @@ function buildIcon(
     .filter(Boolean)
     .join(" ");
 
+  // Aguardando/atrasado (measurement_gap) → "!" flutuante no canto sup.
+  // direito da caixa; dado em dia não ganha selo nenhum.
+  const badge =
+    freshness && freshness !== "updated"
+      ? `<div class="station-box__freshness station-box__freshness--${freshness}" title="${escapeHtml(
+          FRESHNESS_LABELS[freshness],
+        )}">${FRESHNESS_BADGE_SVG}</div>`
+      : "";
+
   return L.divIcon({
     className,
     html:
-      `<div class="station-box station-box--${format}"${
+      `<div class="station-box-inner"><div class="station-box station-box--${format}"${
         title ? ` title="${title}"` : ""
-      }>${rows.join("")}</div>`,
+      }>${rows.join("")}</div>${badge}</div>`,
     iconSize: [dims.w, dims.h],
     iconAnchor: [dims.w / 2, dims.h / 2],
   });
@@ -213,6 +229,7 @@ export default function StationsLayer({
           s.name,
           status?.series ?? null,
           status?.classification ?? "normal",
+          status?.freshness ?? null,
           s.id === selectedId,
           boxFormat,
         ),
