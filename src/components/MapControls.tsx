@@ -1,19 +1,22 @@
 interface MapControlsProps {
   onOpenSettings: () => void;
-  onRecenter: () => void;
-  onResetPositions: () => void;
+  /** Omitido na visão de fluxo — não tem mapa/Leaflet pra recentralizar. */
+  onRecenter?: () => void;
+  /** Omitido na visão de fluxo — layout é curado, não tem posição salva. */
+  onResetPositions?: () => void;
   /** Desabilita o botão de resetar quando não há caixa arrastada manualmente. */
-  hasCustomPositions: boolean;
-  /** Baixa um print (PNG) do mapa como está agora. */
+  hasCustomPositions?: boolean;
+  /** Baixa um print (PNG) da visão atual (mapa ou fluxo). */
   onCapture: () => void;
   /** Captura em andamento — desabilita o botão e troca o ícone por um spinner. */
   capturing: boolean;
 }
 
 /**
- * Botões abaixo do controle de zoom do Leaflet: configurações, centralizar o
- * mapa no enquadramento inicial, resetar as caixas arrastadas manualmente e
- * baixar um print do mapa.
+ * Botões abaixo do controle de zoom do Leaflet (mapa) ou no canto
+ * equivalente do fluxo: configurações + baixar imagem sempre aparecem;
+ * centralizar/resetar posições só existem no mapa (props opcionais —
+ * omitidas, o botão nem entra no grupo).
  */
 export default function MapControls({
   onOpenSettings,
@@ -48,56 +51,62 @@ export default function MapControls({
         </svg>
       </button>
 
-      <span className="map-controls__sep" />
+      {onRecenter && (
+        <>
+          <span className="map-controls__sep" />
+          <button
+            type="button"
+            className="map-controls__btn"
+            onClick={onRecenter}
+            aria-label="Centralizar mapa"
+            title="Centralizar mapa"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="2.5" />
+              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+            </svg>
+          </button>
+        </>
+      )}
 
-      <button
-        type="button"
-        className="map-controls__btn"
-        onClick={onRecenter}
-        aria-label="Centralizar mapa"
-        title="Centralizar mapa"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          width="16"
-          height="16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="2.5" />
-          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-        </svg>
-      </button>
-
-      <span className="map-controls__sep" />
-
-      <button
-        type="button"
-        className="map-controls__btn"
-        onClick={onResetPositions}
-        disabled={!hasCustomPositions}
-        aria-label="Resetar posições das caixas"
-        title="Resetar posições das caixas"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          width="16"
-          height="16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M3 12a9 9 0 1 0 3-6.7" />
-          <path d="M3 4v5h5" />
-        </svg>
-      </button>
+      {onResetPositions && (
+        <>
+          <span className="map-controls__sep" />
+          <button
+            type="button"
+            className="map-controls__btn"
+            onClick={onResetPositions}
+            disabled={!hasCustomPositions}
+            aria-label="Resetar posições das caixas"
+            title="Resetar posições das caixas"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 12a9 9 0 1 0 3-6.7" />
+              <path d="M3 4v5h5" />
+            </svg>
+          </button>
+        </>
+      )}
 
       <span className="map-controls__sep" />
 
@@ -106,8 +115,8 @@ export default function MapControls({
         className="map-controls__btn"
         onClick={onCapture}
         disabled={capturing}
-        aria-label="Baixar imagem do mapa"
-        title="Baixar imagem do mapa"
+        aria-label="Baixar imagem"
+        title="Baixar imagem"
       >
         {capturing ? (
           <svg

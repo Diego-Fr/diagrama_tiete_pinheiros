@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",
+    "@xyflow/react": "^12.11.6",
     "chart.js": "^4.4.6",
     "chartjs-plugin-annotation": "^3.1.0",
     "chartjs-plugin-zoom": "^2.2.0",

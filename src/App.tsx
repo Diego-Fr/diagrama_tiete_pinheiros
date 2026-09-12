@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import MapView from "@/components/MapView";
+import FlowView from "@/components/FlowView";
+import AppNavbar from "@/components/AppNavbar";
 import AppTitleMenu from "@/components/AppTitleMenu";
 import BaseLayerSwitcher from "@/components/BaseLayerSwitcher";
 import MapControls from "@/components/MapControls";
@@ -9,6 +11,8 @@ import RefreshBar from "@/components/RefreshBar";
 import SettingsSidebar from "@/components/SettingsSidebar";
 import StationSidebar from "@/components/StationSidebar";
 import StationModal from "@/components/StationModal";
+import BarrageSidebar from "@/components/BarrageSidebar";
+import ViewSwitcher, { type AppView } from "@/components/ViewSwitcher";
 import type { LevelClass } from "@/lib/classification";
 import { formatFileStampBR } from "@/lib/datetime";
 import { downloadElementAsPng } from "@/lib/mapSnapshot";
@@ -25,7 +29,13 @@ function waitTwoFrames(): Promise<void> {
 
 export default function App() {
   const shellRef = useRef<HTMLDivElement>(null);
+  // Mapa geográfico (Leaflet) ↔ diagrama de fluxo (React Flow) — trocado
+  // pelo ViewSwitcher ao lado do título.
+  const [view, setView] = useState<AppView>("map");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // Barragem selecionada no fluxo (Barragem Móvel/da Penha) — mutuamente
+  // exclusiva com `selectedId`: só uma sidebar aberta por vez.
+  const [selectedBarrageId, setSelectedBarrageId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [recenterTick, setRecenterTick] = useState(0);
@@ -66,11 +76,27 @@ export default function App() {
     setModalOpen(false);
     setSelectedId(null);
   };
-
-  // Clique em área vazia do mapa: fecha o sidebar da estação e sinaliza o
-  // popover de data (que se fecha ao observar o closeSignal mudar).
-  const handleMapClick = () => {
+  const closeBarrage = () => setSelectedBarrageId(null);
+  const closeSelections = () => {
     closeStation();
+    closeBarrage();
+  };
+
+  // Seleção de posto e de barragem são mutuamente exclusivas — só uma
+  // sidebar por vez.
+  const handleSelectStation = (id: number) => {
+    closeBarrage();
+    setSelectedId(id);
+  };
+  const handleSelectBarrage = (id: string) => {
+    closeStation();
+    setSelectedBarrageId(id);
+  };
+
+  // Clique em área vazia do mapa: fecha as sidebars e sinaliza o popover de
+  // data (que se fecha ao observar o closeSignal mudar).
+  const handleMapClick = () => {
+    closeSelections();
     setMapClickTick((t) => t + 1);
   };
 
@@ -94,74 +120,110 @@ export default function App() {
     }
   }, [capturing, referenceDate]);
 
+  // Congela a animação de vazão durante o print — vale pro mapa e pro fluxo.
+  const effectiveRiverFlow = capturing ? false : settings.riverFlowAnimation;
+
   return (
-    <div
-      className={`app-shell${capturing ? " app-shell--capturing" : ""}`}
-      ref={shellRef}
-    >
-      <AppTitleMenu />
-      <RefreshBar referenceDate={referenceDate} />
-      <MapDateCard
-        referenceDate={referenceDate}
-        onChange={setReferenceDate}
-        closeSignal={mapClickTick}
-        captureAsOf={captureAsOf}
-      />
+    <div className="app-root">
+      <AppNavbar />
+      <div
+        className={`app-shell${capturing ? " app-shell--capturing" : ""}`}
+        ref={shellRef}
+      >
+        <div className="top-bar-left">
+          <AppTitleMenu />
+          <ViewSwitcher
+            value={view}
+            onChange={(v) => {
+              closeSelections();
+              setView(v);
+            }}
+          />
+        </div>
 
-      <MapView
-        selectedId={selectedId}
-        boxFormat={settings.boxFormat}
-        baseLayer={settings.baseLayer}
-        riverFlow={capturing ? false : settings.riverFlowAnimation}
-        hoveredLevel={hoveredLevel}
-        hiddenLevels={hiddenLevels}
-        overrides={stationOverrides}
-        referenceDate={referenceDate}
-        recenterKey={recenterTick}
-        onSelectStation={setSelectedId}
-        onDragStation={setStationPosition}
-        onMapClick={handleMapClick}
-      />
+        {view === "flow" ? (
+          <FlowView
+            referenceDate={referenceDate}
+            boxFormat={settings.boxFormat}
+            riverFlow={effectiveRiverFlow}
+            selectedId={selectedId}
+            onSelectStation={handleSelectStation}
+            selectedBarrageId={selectedBarrageId}
+            onSelectBarrage={handleSelectBarrage}
+            hoveredLevel={hoveredLevel}
+            hiddenLevels={hiddenLevels}
+            onPaneClick={closeSelections}
+          />
+        ) : (
+          <>
+            <RefreshBar referenceDate={referenceDate} />
+            <MapDateCard
+              referenceDate={referenceDate}
+              onChange={setReferenceDate}
+              closeSignal={mapClickTick}
+              captureAsOf={captureAsOf}
+            />
 
-      <MapControls
-        onOpenSettings={() => setSettingsOpen(true)}
-        onRecenter={() => setRecenterTick((t) => t + 1)}
-        onResetPositions={resetStationPositions}
-        hasCustomPositions={Object.keys(stationOverrides).length > 0}
-        onCapture={handleCapture}
-        capturing={capturing}
-      />
-      <BaseLayerSwitcher
-        value={settings.baseLayer}
-        onChange={(id) => setSetting("baseLayer", id)}
-      />
-      <MapLegend
-        hidden={hiddenLevels}
-        onHover={setHoveredLevel}
-        onToggle={toggleLevel}
-      />
+            <MapView
+              selectedId={selectedId}
+              boxFormat={settings.boxFormat}
+              baseLayer={settings.baseLayer}
+              riverFlow={effectiveRiverFlow}
+              hoveredLevel={hoveredLevel}
+              hiddenLevels={hiddenLevels}
+              overrides={stationOverrides}
+              referenceDate={referenceDate}
+              recenterKey={recenterTick}
+              onSelectStation={handleSelectStation}
+              onDragStation={setStationPosition}
+              onMapClick={handleMapClick}
+            />
 
-      <SettingsSidebar
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        format={settings.boxFormat}
-        onFormatChange={(f) => setSetting("boxFormat", f)}
-        riverFlow={settings.riverFlowAnimation}
-        onRiverFlowChange={(v) => setSetting("riverFlowAnimation", v)}
-      />
-      <StationSidebar
-        stationId={selectedId}
-        referenceDate={referenceDate}
-        onClose={closeStation}
-        onExpand={() => setModalOpen(true)}
-      />
-      {modalOpen && selectedId != null && (
-        <StationModal
-          key={selectedId}
-          stationId={selectedId}
-          onClose={() => setModalOpen(false)}
+            <BaseLayerSwitcher
+              value={settings.baseLayer}
+              onChange={(id) => setSetting("baseLayer", id)}
+            />
+          </>
+        )}
+
+        <MapLegend
+          hidden={hiddenLevels}
+          onHover={setHoveredLevel}
+          onToggle={toggleLevel}
+          showBarrageItem={view === "flow"}
         />
-      )}
+
+        <MapControls
+          onOpenSettings={() => setSettingsOpen(true)}
+          onRecenter={view === "map" ? () => setRecenterTick((t) => t + 1) : undefined}
+          onResetPositions={view === "map" ? resetStationPositions : undefined}
+          hasCustomPositions={Object.keys(stationOverrides).length > 0}
+          onCapture={handleCapture}
+          capturing={capturing}
+        />
+        <SettingsSidebar
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          format={settings.boxFormat}
+          onFormatChange={(f) => setSetting("boxFormat", f)}
+          riverFlow={settings.riverFlowAnimation}
+          onRiverFlowChange={(v) => setSetting("riverFlowAnimation", v)}
+        />
+        <StationSidebar
+          stationId={selectedId}
+          referenceDate={referenceDate}
+          onClose={closeStation}
+          onExpand={() => setModalOpen(true)}
+        />
+        <BarrageSidebar barrageId={selectedBarrageId} onClose={closeBarrage} />
+        {modalOpen && selectedId != null && (
+          <StationModal
+            key={selectedId}
+            stationId={selectedId}
+            onClose={() => setModalOpen(false)}
+          />
+        )}
+      </div>
     </div>
   );
 }

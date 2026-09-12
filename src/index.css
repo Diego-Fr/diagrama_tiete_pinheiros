@@ -19,17 +19,340 @@ body {
   margin: 0;
 }
 
-/* O mapa ocupa a viewport inteira; overlays entram por cima depois. */
-.app-shell {
-  position: relative;
+/* Navbar (altura fixa) + app-shell (resto da tela) empilhados — o mapa/fluxo
+   preenchem o que sobra, não o viewport inteiro mais. */
+.app-root {
+  display: flex;
+  flex-direction: column;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
 }
 
+/* O mapa ocupa o resto da tela (abaixo da navbar); overlays entram por cima
+   depois. */
+.app-shell {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0; /* sem isso o flex item não encolhe, o mapa estoura a tela */
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ===========================================================================
+   Navbar principal (SIBH) — replica o essencial da navbar do app Rails em
+   produção (logo, menus com submenu, login). Sempre visível, nas duas
+   visões (mapa e fluxo) — fica fora do `.app-shell`, então nunca entra no
+   print (câmera captura só `.app-shell`).
+   =========================================================================== */
+.app-navbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 20px;
+  background: #1868c4;
+  border-top: 3px solid #d84315;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+  position: relative;
+  z-index: 2000;
+}
+.app-navbar__brand {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  text-decoration: none;
+  margin-right: 28px;
+  white-space: nowrap;
+  transition: color 120ms ease;
+}
+.app-navbar__brand:hover {
+  color: #ffd54f;
+}
+.app-navbar__nav {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  flex: 1;
+  /* NÃO usar overflow-x:auto aqui — por regra do CSS, um overflow-x que não
+     seja "visible" força o overflow-y do MESMO elemento pra "auto" também,
+     e isso cortava o dropdown (que estica pra baixo do próprio elemento).
+     Sem scroll horizontal por ora — o breakpoint de 760px já encolhe o
+     suficiente pro essencial caber. */
+}
+.app-navbar__item {
+  position: relative;
+  display: flex;
+}
+.app-navbar__link {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 120ms ease;
+}
+/* Destaque só na cor da fonte — sem preencher fundo. */
+.app-navbar__link:hover,
+.app-navbar__link--open {
+  background: transparent;
+  color: #ffd54f;
+}
+.app-navbar__menu {
+  position: absolute;
+  /* encostado no gatilho (sem gap) — com gap o mouse "sai" do item ao
+     descer do botão pro menu e o hover fecha antes de chegar. */
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.28);
+  z-index: 2001;
+}
+.app-navbar__menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.app-navbar__menu-item:hover {
+  background: #f1f5f9;
+}
+.app-navbar__login {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.app-navbar__login:hover {
+  border-color: #ffd54f;
+  color: #ffd54f;
+}
+.app-navbar__login:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+/* Sessão logada: "Bem-vindo, <nome>" + menu de logout — mesmo espírito do
+   `.app-navbar__item` (dropdown), só que abre pra ESQUERDA (é o último item,
+   à direita da barra) e o hover é só cor de fonte, sem fundo/borda. */
+.app-navbar__item--user {
+  margin-left: 4px;
+}
+.app-navbar__welcome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+.app-navbar__welcome:hover,
+.app-navbar__welcome.app-navbar__link--open {
+  color: #ffd54f;
+}
+.app-navbar__welcome-chevron {
+  transition: transform 120ms ease;
+}
+.app-navbar__welcome[aria-expanded="true"] .app-navbar__welcome-chevron {
+  transform: rotate(180deg);
+}
+.app-navbar__menu--right {
+  left: auto;
+  right: 0;
+  min-width: 140px;
+}
+
+/* ===========================================================================
+   Modal de login — mesmo padrão de backdrop/painel do StationModal, corpo
+   bem mais simples (e-mail + senha). Sem sessão/backend real ainda.
+   =========================================================================== */
+.login-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.62);
+  animation: modal-fade 120ms ease-out;
+}
+.login-modal__panel {
+  position: relative;
+  width: min(360px, 100%);
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.4);
+  overflow: hidden;
+}
+.login-modal__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.login-modal__close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+.login-modal__brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 24px;
+  background: #1868c4;
+  border-bottom: 3px solid #d84315;
+}
+.login-modal__logo {
+  height: 34px;
+  width: auto;
+}
+.login-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 24px 24px;
+}
+.login-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+.login-modal__field input {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  color: #0f172a;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+.login-modal__field input:focus {
+  outline: 2px solid #1868c4;
+  outline-offset: 1px;
+}
+.login-modal__error {
+  margin: -4px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.login-modal__submit {
+  margin-top: 6px;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #1868c4;
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.login-modal__submit:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+.login-modal__submit:hover {
+  background: #0f52a0;
+}
+
 .map-root {
   width: 100%;
   height: 100%;
+}
+
+/* Diagrama de fluxo dentro de um card branco, como se fosse um wrapper —
+   pedido do usuário (2026-09-12). `.flow-root` só dá o "fundo"/respiro ao
+   redor; `.flow-card` é o card em si, e o React Flow vive dentro dele. */
+.flow-root {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  background: #e9edf3;
+}
+.flow-card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow:
+    0 12px 32px rgba(15, 23, 42, 0.12),
+    0 2px 8px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+.flow-root .react-flow__attribution {
+  display: none;
+}
+/* Wrapper do nó de posto no fluxo — SEGURO dar position:relative aqui (não é
+   o elemento posicionado pelo React Flow em si, é só o conteúdo por dentro;
+   diferente do `.station-box-wrapper` do mapa, que É o elemento do Leaflet e
+   não pode receber `position` — ver nota lá). */
+.flow-station-node {
+  position: relative;
+  /* O React Flow desliga pointer-events no nó quando nodesDraggable/
+     elementsSelectable/nodesConnectable estão todos off (nosso caso — layout
+     é curado, sem drag) porque não faz ideia que temos onClick por dentro do
+     conteúdo do nó. Religa aqui, só nesse wrapper (não em
+     `.station-box-wrapper`, que é compartilhado com o mapa/Leaflet). */
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 /* Enquanto o print do mapa é gerado (botão de câmera): some com o que é
@@ -38,20 +361,33 @@ body {
    resolvida) e legenda continuam, dão contexto na imagem baixada. */
 .app-shell--capturing .leaflet-control-zoom,
 .app-shell--capturing .map-controls,
-.app-shell--capturing .baselayer-switcher {
+.app-shell--capturing .baselayer-switcher,
+.app-shell--capturing .react-flow__controls {
   display: none !important;
+}
+
+/* Grupo top-left: título (select dos diagramas) + troca de visualização
+   (mapa/fluxo), lado a lado. Um wrapper só cuida do posicionamento
+   absoluto — cada card por dentro (`.app-title-menu`, `.view-switcher`) é só
+   `position:relative`, servindo de âncora pro próprio dropdown. */
+.top-bar-left {
+  position: absolute;
+  top: 12px;
+  left: 56px;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  /* Encolhe antes de encavalar com o card de data no canto oposto — a
+     largura reservada pra ele (~150px) + as margens dos dois lados. */
+  max-width: calc(100vw - 220px);
 }
 
 /* Título sobre o mapa, num card branco que simula um select — clicar abre a
    lista de diagramas disponíveis (por enquanto só um). */
 .app-title-menu {
-  position: absolute;
-  top: 12px;
-  left: 56px;
-  z-index: 1200;
-  /* Encolhe antes de encavalar com o card de data no canto oposto — a
-     largura reservada pra ele (~150px) + as margens dos dois lados. */
-  max-width: calc(100vw - 220px);
+  position: relative;
+  min-width: 0;
 }
 .app-title-menu__trigger {
   display: flex;
@@ -114,6 +450,71 @@ body {
   background: #f1f5f9;
 }
 .app-title-menu__item--active {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+/* Troca de contexto (mapa ↔ fluxo) — mesmo visual "select" do título ao
+   lado, mas a seleção aqui tem efeito de verdade. */
+.view-switcher {
+  position: relative;
+  flex-shrink: 0;
+}
+.view-switcher__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+}
+.view-switcher__trigger:hover {
+  background: #f8fafc;
+}
+.view-switcher__label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+.view-switcher__chevron {
+  color: #64748b;
+  flex-shrink: 0;
+}
+.view-switcher__list {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
+}
+.view-switcher__item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.view-switcher__item:hover {
+  background: #f1f5f9;
+}
+.view-switcher__item--active {
   background: #e0f2fe;
   color: #0369a1;
 }
@@ -1144,6 +1545,25 @@ body {
   color: #4c0519;
 }
 
+/* Item não-interativo (só no fluxo) explicando a barra escura das
+   barragens — não é clicável/realçável como os níveis de classificação. */
+.map-legend__item--barrage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #e2e8f0;
+  color: #334155;
+  cursor: default;
+}
+.map-legend__barrage-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  border-radius: 2px;
+  background: #1e293b;
+  border: 1px solid #0f172a;
+}
+
 /* ===========================================================================
    Seletor de camada base (canto inferior esquerdo, estilo Google Maps)
    =========================================================================== */
@@ -1292,6 +1712,128 @@ body {
   .river-flow {
     animation: none;
   }
+}
+
+/* ===========================================================================
+   Diagrama de fluxo (React Flow) — nome do rio sobre o cano + animação de
+   vazão, mesma ideia do RiversLayer no mapa.
+   =========================================================================== */
+.flow-river-label {
+  font-size: 12px;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+/* faixa clara "correndo" sobre o cano — todo cano do fluxo foi montado no
+   sentido jusante→montante (ver flowDiagram.ts), o oposto do fluxo real da
+   água, por isso a animação já sai sempre invertida (`reverse`). */
+.flow-pipe-anim {
+  animation: flow-pipe-move 1.1s linear infinite reverse;
+}
+@keyframes flow-pipe-move {
+  to {
+    /* um ciclo completo de dash(4) + gap(14) → loop sem emenda */
+    stroke-dashoffset: -18;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow-pipe-anim {
+    animation: none;
+  }
+}
+
+/* Barragem/estrutura — retângulo vertical cruzando o cano (função de
+   "barrar" a água), uma listra (comporta) por `gateCount`, colorida por
+   status (verde=aberta/vermelho=fechada — ver `src/lib/gateStatus.ts`; sem
+   dado real ainda, a premissa é todas abertas). */
+.barrage-node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 20px;
+  height: 84px;
+  padding: 3px;
+  background: #1e293b;
+  border: 2px solid #0f172a;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: box-shadow 120ms ease;
+}
+.barrage-node:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.barrage-node__gate {
+  flex: 1;
+  border-radius: 1px;
+}
+.barrage-node--selected {
+  box-shadow: 0 0 0 3px #2563eb, 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+/* Sidebar da barragem — mesma moldura da StationSidebar (.station-sidebar),
+   sem gráfico: lista de comportas. */
+.barrage-sidebar__updated {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+.barrage-sidebar__gates {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+}
+.barrage-sidebar__gates-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+.barrage-sidebar__gates-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.barrage-sidebar__gate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #334155;
+}
+.barrage-sidebar__gate-status {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.barrage-sidebar__gate-status--aberta {
+  background: #dcfce7;
+  color: #15803d;
+}
+.barrage-sidebar__gate-status--fechada {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.barrage-sidebar__note {
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
 }
 
 /* toggle (switch) das configurações */
@@ -1449,6 +1991,27 @@ body {
    (scripts/responsive-screenshots.mjs) pros antes/depois.
    =========================================================================== */
 @media (max-width: 760px) {
+  /* Navbar encolhe — marca menor, menus mais compactos, texto do login some
+     (fica só o ícone), o essencial cabe sem precisar rolar. */
+  .app-navbar {
+    padding: 0 10px;
+    gap: 4px;
+  }
+  .app-navbar__brand {
+    font-size: 19px;
+    margin-right: 12px;
+  }
+  .app-navbar__link {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  .app-navbar__login {
+    padding: 8px 10px;
+  }
+  .app-navbar__login-label {
+    display: none;
+  }
+
   /* Card de data encolhe (padding/fonte) — dá mais fôlego pro título ao lado. */
   .map-datecard-wrap {
     top: 8px;
@@ -1464,16 +2027,19 @@ body {
     font-size: 11px;
   }
 
-  .app-title-menu {
+  .top-bar-left {
     top: 8px;
     left: 48px;
+    gap: 6px;
     max-width: calc(100vw - 170px);
   }
-  .app-title-menu__trigger {
+  .app-title-menu__trigger,
+  .view-switcher__trigger {
     padding: 6px 10px;
     gap: 6px;
   }
-  .app-title-menu__label {
+  .app-title-menu__label,
+  .view-switcher__label {
     font-size: 13px;
   }
 
@@ -1522,7 +2088,7 @@ body {
 }
 
 @media (max-width: 480px) {
-  .app-title-menu {
+  .top-bar-left {
     max-width: calc(100vw - 132px);
   }
   .app-title-menu__label {

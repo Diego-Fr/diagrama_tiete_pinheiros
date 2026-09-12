@@ -7,6 +7,8 @@ interface MapLegendProps {
   onHover: (level: LevelClass | null) => void;
   /** Alterna a visibilidade das caixas daquele nível. */
   onToggle: (level: LevelClass) => void;
+  /** Só no fluxo: acrescenta um item explicando a barra escura (barragem). */
+  showBarrageItem?: boolean;
 }
 
 /**
@@ -17,6 +19,7 @@ export default function MapLegend({
   hidden,
   onHover,
   onToggle,
+  showBarrageItem,
 }: MapLegendProps) {
   return (
     <div className="map-legend" onMouseLeave={() => onHover(null)}>
@@ -40,6 +43,12 @@ export default function MapLegend({
           </button>
         );
       })}
+      {showBarrageItem && (
+        <span className="map-legend__item map-legend__item--barrage">
+          <span className="map-legend__barrage-swatch" aria-hidden="true" />
+          Barragem
+        </span>
+      )}
     </div>
   );
 }

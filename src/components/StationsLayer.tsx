@@ -7,22 +7,11 @@ import { BOX_DIMS, type BoxFormat } from "@/lib/boxFormat";
 import { declutter } from "@/lib/declutter";
 import { formatFullDateTimeBR } from "@/lib/datetime";
 import { FRESHNESS_LABELS, type Freshness } from "@/lib/freshness";
+import { formatMeters, trendOf } from "@/lib/stationFormat";
 import { TREND_PATHS, type Trend } from "@/lib/trendIcons";
 import type { LatLngTuple } from "@/hooks/useStationPositions";
 import { fluviometricStations } from "@/data/stations";
 import { useStationStatus } from "@/hooks/useStationStatus";
-
-/** Valor da API vem em centímetros; a caixa exibe metros com 3 casas. */
-function formatMeters(centimeters: number): string {
-  return (centimeters / 100).toFixed(3);
-}
-
-/** Tendência simples: penúltima leitura vs. última. */
-function trendOf(series: StationSeries): Trend {
-  const previous = series.previous?.value;
-  if (previous == null || series.last.value === previous) return "flat";
-  return series.last.value > previous ? "up" : "down";
-}
 
 /**
  * Setas como SVG (não glifo de fonte) — assim `align-items: center` do flex
