@@ -47,6 +47,10 @@ export default function StationSidebar({
   const classification = status?.classification ?? "normal";
   const last = series?.last ?? null;
   const freshness = status?.freshness ?? null;
+  // Prefixo da API (correto) quando disponível; só cai pro estático
+  // (`station.prefix`, que tem registros corrompidos — ver `stations.ts`)
+  // se a janela consultada não trouxe nenhuma leitura ainda.
+  const prefix = series?.prefix ?? station.prefix;
 
   const chartTitle = referenceDate
     ? `Nível — 6 h até ${formatDateTimeBR(referenceDate)}`
@@ -70,7 +74,7 @@ export default function StationSidebar({
       <header className="station-sidebar__head">
         <h2 className="station-sidebar__name">{station.name}</h2>
         <p className="station-sidebar__meta">
-          <span>{station.prefix}</span>
+          <span>{prefix}</span>
           <span>
             {station.lat.toFixed(5)}, {station.lng.toFixed(5)}
           </span>

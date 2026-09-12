@@ -33,6 +33,14 @@ export interface Reading {
 /** Série de uma estação na janela consultada, já agregada para a UI. */
 export interface StationSeries {
   stationId: number;
+  /** Prefixo ("E3-279" etc.) — vem da própria API (`RawMeasurement.prefix`),
+   * que é a fonte CORRETA (ver `src/data/stations.ts`: o `prefix` do JSON
+   * estático tem registros corrompidos — "3E-193" virou o float `3e-193` ao
+   * ser exportado sem aspas — e a UI não deve cair para `alt_prefix`, que é
+   * outro identificador, não uma variação do prefixo). Null só quando a
+   * janela consultada não trouxe nenhuma leitura dessa estação (a UI cai
+   * pro `StationPoint.prefix` estático nesse caso). */
+  prefix: string | null;
   /** Todas as leituras da janela, ordenadas por data crescente (para o gráfico). */
   readings: Reading[];
   /** Leitura mais recente. */
@@ -107,11 +115,18 @@ export async function fetchSeriesInRange(
   );
 
   const readingsByStation = new Map<number, Reading[]>();
+  // Prefixo por estação — capturado de QUALQUER linha (mesmo `value: null`),
+  // já que é metadado da estação, não da leitura em si.
+  const prefixByStation = new Map<number, string>();
   for (const m of batches.flat()) {
-    if (m.value == null) continue;
     const id = Number(m.station_prefix_id);
     if (!Number.isFinite(id)) continue;
 
+    if (!prefixByStation.has(id) && typeof m.prefix === "string" && m.prefix.trim()) {
+      prefixByStation.set(id, m.prefix.trim());
+    }
+
+    if (m.value == null) continue;
     const list = readingsByStation.get(id) ?? [];
     list.push({ value: m.value, date: m.date, at: parseApiUtcDate(m.date) });
     readingsByStation.set(id, list);
@@ -134,6 +149,7 @@ export async function fetchSeriesInRange(
 
     series.set(id, {
       stationId: id,
+      prefix: prefixByStation.get(id) ?? null,
       readings,
       last,
       previous,

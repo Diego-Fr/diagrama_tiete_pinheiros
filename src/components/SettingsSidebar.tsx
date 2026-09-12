@@ -1,10 +1,12 @@
-import { BOX_FORMAT_OPTIONS, type BoxFormat } from "@/lib/boxFormat";
+import { BOX_FORMAT_OPTIONS, BOX_SIZE_OPTIONS, type BoxFormat, type BoxSize } from "@/lib/boxFormat";
 
 interface SettingsSidebarProps {
   open: boolean;
   onClose: () => void;
   format: BoxFormat;
   onFormatChange: (format: BoxFormat) => void;
+  size: BoxSize;
+  onSizeChange: (size: BoxSize) => void;
   riverFlow: boolean;
   onRiverFlowChange: (value: boolean) => void;
 }
@@ -15,6 +17,8 @@ export default function SettingsSidebar({
   onClose,
   format,
   onFormatChange,
+  size,
+  onSizeChange,
   riverFlow,
   onRiverFlowChange,
 }: SettingsSidebarProps) {
@@ -45,6 +49,27 @@ export default function SettingsSidebar({
                 value={option.value}
                 checked={format === option.value}
                 onChange={() => onFormatChange(option.value)}
+              />
+              <span className="settings-radio__text">
+                <strong>{option.label}</strong>
+                <span className="settings-radio__hint">{option.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="settings-sidebar__section">
+        <h3>Tamanho da caixa</h3>
+        <div className="settings-radio-group">
+          {BOX_SIZE_OPTIONS.map((option) => (
+            <label key={option.value} className="settings-radio">
+              <input
+                type="radio"
+                name="box-size"
+                value={option.value}
+                checked={size === option.value}
+                onChange={() => onSizeChange(option.value)}
               />
               <span className="settings-radio__text">
                 <strong>{option.label}</strong>

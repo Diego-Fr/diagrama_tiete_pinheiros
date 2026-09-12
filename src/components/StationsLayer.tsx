@@ -3,7 +3,7 @@ import { CircleMarker, Marker, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { StationSeries } from "@/api/measurements";
 import type { LevelClass } from "@/lib/classification";
-import { BOX_DIMS, type BoxFormat } from "@/lib/boxFormat";
+import { scaledBoxDims, type BoxFormat, type BoxSize } from "@/lib/boxFormat";
 import { declutter } from "@/lib/declutter";
 import { formatFullDateTimeBR } from "@/lib/datetime";
 import { FRESHNESS_LABELS, type Freshness } from "@/lib/freshness";
@@ -62,8 +62,9 @@ function buildIcon(
   freshness: Freshness | null,
   selected: boolean,
   format: BoxFormat,
+  size: BoxSize,
 ): L.DivIcon {
-  const dims = BOX_DIMS[format];
+  const dims = scaledBoxDims(format, size);
   const showName = format === "completo";
   const showRange = format !== "basico" && format !== "minimalista";
   const showTrendUnit = format !== "minimalista";
@@ -151,10 +152,14 @@ function isAtAnchor(anchor: LatLngTuple, pos: LatLngTuple): boolean {
 interface StationsLayerProps {
   selectedId: number | null;
   boxFormat: BoxFormat;
+  boxSize: BoxSize;
   /** Nível sob hover na legenda — desbota as caixas de outros níveis. */
   hoveredLevel: LevelClass | null;
   /** Níveis ocultados na legenda — suas caixas não renderizam. */
   hiddenLevels: Set<LevelClass>;
+  /** Esconde caixas sem nenhuma leitura na janela (mostrando "—") — usado só
+   * durante o print (botão de câmera), pra não sair no PNG com traço. */
+  hideNoData: boolean;
   /** Posições ajustadas manualmente (arrastadas) — vencem o layout automático. */
   overrides: Record<number, LatLngTuple>;
   /** null = agora (ao vivo); data fixa = janela de 6h congelada nela. */
@@ -167,8 +172,10 @@ interface StationsLayerProps {
 export default function StationsLayer({
   selectedId,
   boxFormat,
+  boxSize,
   hoveredLevel,
   hiddenLevels,
+  hideNoData,
   overrides,
   referenceDate,
   onSelectStation,
@@ -181,7 +188,7 @@ export default function StationsLayer({
   // Recalcula o anti-overlap em espaço de tela e converte de volta p/ lat/lng.
   // (Independe dos ajustes manuais — esses só entram na hora de exibir.)
   const solve = useCallback(() => {
-    const dims = BOX_DIMS[boxFormat];
+    const dims = scaledBoxDims(boxFormat, boxSize);
     const items = fluviometricStations.map((s) => {
       const p = map.latLngToContainerPoint([s.lat, s.lng]);
       return { id: s.id, ax: p.x, ay: p.y, hw: dims.w / 2, hh: dims.h / 2 };
@@ -195,7 +202,7 @@ export default function StationsLayer({
       pos.set(it.id, [ll.lat, ll.lng]);
     }
     setAutoPos(pos);
-  }, [map, boxFormat]);
+  }, [map, boxFormat, boxSize]);
 
   // Geometria relativa só muda com zoom/resize; pan é invariante (markers
   // acompanham por lat/lng).
@@ -221,17 +228,20 @@ export default function StationsLayer({
           status?.freshness ?? null,
           s.id === selectedId,
           boxFormat,
+          boxSize,
         ),
       );
     }
     return m;
-  }, [byId, selectedId, boxFormat]);
+  }, [byId, selectedId, boxFormat, boxSize]);
 
   return (
     <>
       {fluviometricStations.map((s) => {
-        const level = byId.get(s.id)?.classification ?? "normal";
+        const status = byId.get(s.id);
+        const level = status?.classification ?? "normal";
         if (hiddenLevels.has(level)) return null; // ocultado na legenda
+        if (hideNoData && status?.series == null) return null; // print: sem leitura ainda
 
         const dimmed = hoveredLevel != null && level !== hoveredLevel;
         const anchor: LatLngTuple = [s.lat, s.lng];

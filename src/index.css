@@ -3,6 +3,16 @@
     sans-serif;
   line-height: 1.5;
   color-scheme: light dark;
+  /* Escala da caixa de posto (config. "Tamanho da caixa") — 1 = padrão.
+     `App.tsx` sobrescreve no `.app-root` com o valor escolhido pelo
+     usuário; o fallback aqui é só pra qualquer contexto isolado (ex.:
+     testes) que renderize uma caixa fora da árvore do App. Cascata normal
+     de CSS var chega tanto nas caixas do mapa (HTML do Leaflet, que é DOM
+     descendente de `.app-root` mesmo sendo posicionado via transform) quanto
+     nas do fluxo (React Flow). O Leaflet não lê variável CSS, então o
+     `iconSize`/`iconAnchor`/declutter em JS usam `scaledBoxDims` (mesma
+     escala, calculada em `src/lib/boxFormat.ts`) em vez desta var. */
+  --box-scale: 1;
 }
 
 * {
@@ -366,6 +376,13 @@ body {
   display: none !important;
 }
 
+/* Selo de atraso (o "!" no canto sup. direito da caixa) não faz sentido
+   numa imagem estática — some no print, mapa e fluxo (mesma classe nos
+   dois, `.station-box__freshness`). */
+.app-shell--capturing .station-box__freshness {
+  display: none !important;
+}
+
 /* Grupo top-left: título (select dos diagramas) + troca de visualização
    (mapa/fluxo), lado a lado. Um wrapper só cuida do posicionamento
    absoluto — cada card por dentro (`.app-title-menu`, `.view-switcher`) é só
@@ -539,13 +556,14 @@ body {
   position: relative;
 }
 
-/* Selo de atraso — flutua no canto sup. direito da caixa, meio pra fora. */
+/* Selo de atraso — flutua no canto sup. direito da caixa, meio pra fora.
+   Escala junto com a caixa (config. "Tamanho da caixa"). */
 .station-box__freshness {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 15px;
-  height: 15px;
+  top: calc(-6px * var(--box-scale, 1));
+  right: calc(-6px * var(--box-scale, 1));
+  width: calc(15px * var(--box-scale, 1));
+  height: calc(15px * var(--box-scale, 1));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -554,6 +572,11 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   color: #fff;
   z-index: 5;
+}
+/* pisa no width/height do <svg> (9px de base) — mesma lógica da seta. */
+.station-box__freshness svg {
+  width: calc(9px * var(--box-scale, 1));
+  height: calc(9px * var(--box-scale, 1));
 }
 .station-box__freshness--waiting {
   /* amarelo, não laranja — laranja passava urgência demais pra um estado
@@ -568,7 +591,10 @@ body {
 .station-box {
   display: flex;
   flex-direction: column;
-  font-size: 11px;
+  /* Escala junto com "Tamanho da caixa" (config.) — filhos com font-size em
+     px absoluto (nome/range) escalam também via calc() próprio, não por
+     herança de `em` (mantém os valores legíveis/explícitos no código). */
+  font-size: calc(11px * var(--box-scale, 1));
   line-height: 1.25;
   background: #fff;
   border: 1px solid #9aa5b1;
@@ -582,23 +608,25 @@ body {
     transform 120ms ease;
 }
 
-/* Tamanho por formato — precisa bater com BOX_DIMS (iconSize/anchor) para o
-   ponto geográfico cair no centro da caixa. */
+/* Tamanho por formato — precisa bater com `scaledBoxDims()` (iconSize/anchor
+   do mapa, via `--box-scale` em ambos) para o ponto geográfico cair no
+   centro da caixa. No fluxo não há esse cuidado (React Flow mede o node
+   sozinho), mas a mesma variável escala igual, pra manter os dois em sync. */
 .station-box--completo {
-  width: 132px;
-  height: 54px;
+  width: calc(132px * var(--box-scale, 1));
+  height: calc(54px * var(--box-scale, 1));
 }
 .station-box--default {
-  width: 112px;
-  height: 38px;
+  width: calc(112px * var(--box-scale, 1));
+  height: calc(38px * var(--box-scale, 1));
 }
 .station-box--basico {
-  width: 98px;
-  height: 22px;
+  width: calc(98px * var(--box-scale, 1));
+  height: calc(22px * var(--box-scale, 1));
 }
 .station-box--minimalista {
-  width: 66px;
-  height: 20px;
+  width: calc(66px * var(--box-scale, 1));
+  height: calc(20px * var(--box-scale, 1));
 }
 
 .station-box:active {
@@ -607,8 +635,8 @@ body {
 
 /* linha do nome (formato "completo") — trunca com reticências */
 .station-box__name {
-  padding: 1px 5px;
-  font-size: 9px;
+  padding: calc(1px * var(--box-scale, 1)) calc(5px * var(--box-scale, 1));
+  font-size: calc(9px * var(--box-scale, 1));
   font-weight: 600;
   color: #334155;
   text-align: center;
@@ -621,7 +649,7 @@ body {
 /* minimalista: valor centralizado ocupando a caixa toda */
 .station-box--minimalista .station-box__value {
   min-width: 0;
-  padding: 0 4px;
+  padding: 0 calc(4px * var(--box-scale, 1));
   justify-content: center;
 }
 
@@ -640,7 +668,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 5px;
+  padding: 0 calc(5px * var(--box-scale, 1));
   font-variant-numeric: tabular-nums;
 }
 
@@ -653,9 +681,13 @@ body {
   border-left: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-/* seta de tendência: SVG centralizado pelo flex (sem font-glyph nem nudge) */
+/* seta de tendência: SVG centralizado pelo flex (sem font-glyph nem nudge).
+   width/height em CSS pisam no atributo width/height do <svg> (13px de
+   base, ver TREND_SVG/TrendArrow) — escala junto com a caixa. */
 .station-box__trend svg {
   display: block;
+  width: calc(13px * var(--box-scale, 1));
+  height: calc(13px * var(--box-scale, 1));
 }
 
 .station-box__unit {
@@ -678,7 +710,7 @@ body {
 /* linha 2: mínimo | máximo da série */
 .station-box__range {
   display: flex;
-  font-size: 9px;
+  font-size: calc(9px * var(--box-scale, 1));
   color: #667085;
   border-top: 1px solid rgba(0, 0, 0, 0.18);
   font-variant-numeric: tabular-nums;
@@ -687,7 +719,7 @@ body {
 .station-box__min,
 .station-box__max {
   flex: 1 1 50%;
-  padding: 1px 5px;
+  padding: calc(1px * var(--box-scale, 1)) calc(5px * var(--box-scale, 1));
   text-align: center;
   white-space: nowrap;
 }
@@ -1834,6 +1866,84 @@ body {
   font-size: 12px;
   line-height: 1.5;
   color: #64748b;
+}
+/* Comporta editável (usuário com role dev/operator) — o item INTEIRO é um
+   <button> clicável (não só a pílula de status), pedido do usuário. */
+.barrage-sidebar__gate-row-item {
+  margin: 0;
+  padding: 0;
+}
+.barrage-sidebar__gate-row--editable {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+.barrage-sidebar__gate-row--editable:hover {
+  filter: brightness(0.96);
+}
+.barrage-sidebar__gate-row--editable:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.barrage-sidebar__save-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.barrage-sidebar__save-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #1868c4;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.barrage-sidebar__save-button:hover {
+  background: #0f52a0;
+}
+.barrage-sidebar__save-button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+/* Loader do botão "Salvar" — indica requisição em voo (e o `disabled`
+   junto com a trava síncrona no handler evita clique duplo mandar 2x). */
+.barrage-sidebar__spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: barrage-spinner-spin 0.7s linear infinite;
+}
+@keyframes barrage-spinner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.barrage-sidebar__error {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+}
+.barrage-sidebar__saved-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
 }
 
 /* toggle (switch) das configurações */

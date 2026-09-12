@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type CSSProperties } from "react";
 import MapView from "@/components/MapView";
 import FlowView from "@/components/FlowView";
 import AppNavbar from "@/components/AppNavbar";
@@ -13,9 +13,11 @@ import StationSidebar from "@/components/StationSidebar";
 import StationModal from "@/components/StationModal";
 import BarrageSidebar from "@/components/BarrageSidebar";
 import ViewSwitcher, { type AppView } from "@/components/ViewSwitcher";
+import { BOX_SIZE_SCALE } from "@/lib/boxFormat";
 import type { LevelClass } from "@/lib/classification";
 import { formatFileStampBR } from "@/lib/datetime";
 import { downloadElementAsPng } from "@/lib/mapSnapshot";
+import { useAuth } from "@/hooks/useAuth";
 import { useSettings } from "@/hooks/useSettings";
 import { useStationPositions } from "@/hooks/useStationPositions";
 
@@ -52,6 +54,10 @@ export default function App() {
   // mapa e a sidebar respeitam isso — o modal mantém sua própria lógica.
   const [referenceDate, setReferenceDate] = useState<Date | null>(null);
   const { settings, setSetting } = useSettings();
+  // Sessão única (não chamar `useAuth` de novo em outro componente — ver
+  // comentário no próprio hook) — repassada pra navbar (mostrar "Bem-vindo")
+  // e pra sidebar da barragem (autorizar toggle das comportas).
+  const auth = useAuth();
   const {
     overrides: stationOverrides,
     setPosition: setStationPosition,
@@ -124,8 +130,11 @@ export default function App() {
   const effectiveRiverFlow = capturing ? false : settings.riverFlowAnimation;
 
   return (
-    <div className="app-root">
-      <AppNavbar />
+    <div
+      className="app-root"
+      style={{ "--box-scale": BOX_SIZE_SCALE[settings.boxSize] } as CSSProperties}
+    >
+      <AppNavbar auth={auth} />
       <div
         className={`app-shell${capturing ? " app-shell--capturing" : ""}`}
         ref={shellRef}
@@ -141,6 +150,16 @@ export default function App() {
           />
         </div>
 
+        {/* Seletor de data — comum às duas visões (mapa e fluxo usam a
+            mesma `referenceDate`, pedido do usuário: "os dois contextos
+            até podem usar a mesma data, não vejo problema"). */}
+        <MapDateCard
+          referenceDate={referenceDate}
+          onChange={setReferenceDate}
+          closeSignal={mapClickTick}
+          captureAsOf={captureAsOf}
+        />
+
         {view === "flow" ? (
           <FlowView
             referenceDate={referenceDate}
@@ -152,25 +171,22 @@ export default function App() {
             onSelectBarrage={handleSelectBarrage}
             hoveredLevel={hoveredLevel}
             hiddenLevels={hiddenLevels}
-            onPaneClick={closeSelections}
+            hideNoData={capturing}
+            onPaneClick={handleMapClick}
           />
         ) : (
           <>
             <RefreshBar referenceDate={referenceDate} />
-            <MapDateCard
-              referenceDate={referenceDate}
-              onChange={setReferenceDate}
-              closeSignal={mapClickTick}
-              captureAsOf={captureAsOf}
-            />
 
             <MapView
               selectedId={selectedId}
               boxFormat={settings.boxFormat}
+              boxSize={settings.boxSize}
               baseLayer={settings.baseLayer}
               riverFlow={effectiveRiverFlow}
               hoveredLevel={hoveredLevel}
               hiddenLevels={hiddenLevels}
+              hideNoData={capturing}
               overrides={stationOverrides}
               referenceDate={referenceDate}
               recenterKey={recenterTick}
@@ -206,6 +222,8 @@ export default function App() {
           onClose={() => setSettingsOpen(false)}
           format={settings.boxFormat}
           onFormatChange={(f) => setSetting("boxFormat", f)}
+          size={settings.boxSize}
+          onSizeChange={(s) => setSetting("boxSize", s)}
           riverFlow={settings.riverFlowAnimation}
           onRiverFlowChange={(v) => setSetting("riverFlowAnimation", v)}
         />
@@ -215,7 +233,7 @@ export default function App() {
           onClose={closeStation}
           onExpand={() => setModalOpen(true)}
         />
-        <BarrageSidebar barrageId={selectedBarrageId} onClose={closeBarrage} />
+        <BarrageSidebar barrageId={selectedBarrageId} onClose={closeBarrage} auth={auth} />
         {modalOpen && selectedId != null && (
           <StationModal
             key={selectedId}

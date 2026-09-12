@@ -78,6 +78,9 @@ interface FlowViewProps {
   hoveredLevel: LevelClass | null;
   /** Níveis ocultados na legenda — suas caixas não aparecem. */
   hiddenLevels: Set<LevelClass>;
+  /** Esconde caixas sem nenhuma leitura na janela (mostrando "—") — usado só
+   * durante o print (botão de câmera), pra não sair no PNG com traço. */
+  hideNoData: boolean;
   /** Clique em área vazia do canvas. */
   onPaneClick: () => void;
 }
@@ -98,6 +101,7 @@ export default function FlowView({
   onSelectBarrage,
   hoveredLevel,
   hiddenLevels,
+  hideNoData,
   onPaneClick,
 }: FlowViewProps) {
   const { byId } = useStationStatus(referenceDate);
@@ -123,7 +127,7 @@ export default function FlowView({
           id: String(s.id),
           type: "station" as const,
           position: { x, y },
-          hidden: hiddenLevels.has(classification),
+          hidden: hiddenLevels.has(classification) || (hideNoData && status?.series == null),
           style: { opacity: dimmed ? 0.12 : 1, transition: "opacity 140ms ease" },
           data: {
             stationId: s.id,
@@ -175,6 +179,7 @@ export default function FlowView({
     onSelectBarrage,
     hoveredLevel,
     hiddenLevels,
+    hideNoData,
   ]);
 
   const edges: Edge<PipeEdgeData>[] = useMemo(

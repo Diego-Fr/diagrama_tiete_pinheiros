@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { NAV_ITEMS } from "@/config/nav";
 import LoginModal from "@/components/LoginModal";
-import { useAuth } from "@/hooks/useAuth";
+import type { AuthState } from "@/hooks/useAuth";
 
 const SIBH_HOME_URL = "https://apps.spaguas.sp.gov.br/sibh/";
+
+interface AppNavbarProps {
+  /** `useAuth()` chamado uma vez só em `App.tsx` — ver comentário no hook. */
+  auth: AuthState;
+}
 
 /** Primeiro nome só, pro "Bem-vindo" não ficar gigante com nome completo. */
 function firstName(fullName: string): string {
@@ -20,12 +25,12 @@ function firstName(fullName: string): string {
  * <nome>" com um menu de logout. Aparece nas duas visões (mapa e fluxo),
  * fora do `.app-shell` — ver `App.tsx`.
  */
-export default function AppNavbar() {
+export default function AppNavbar({ auth }: AppNavbarProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const rootRef = useRef<HTMLElement>(null);
-  const { user, checkingSession, login, logout } = useAuth();
+  const { user, checkingSession, login, logout } = auth;
 
   useEffect(() => {
     if (!openMenu && !userMenuOpen) return;

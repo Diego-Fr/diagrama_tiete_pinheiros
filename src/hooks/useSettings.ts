@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { BOX_FORMATS, type BoxFormat } from "@/lib/boxFormat";
+import { BOX_FORMATS, BOX_SIZES, type BoxFormat, type BoxSize } from "@/lib/boxFormat";
 
 export type BaseLayerId = "gray" | "satellite";
 const BASE_LAYERS: BaseLayerId[] = ["gray", "satellite"];
@@ -7,6 +7,8 @@ const BASE_LAYERS: BaseLayerId[] = ["gray", "satellite"];
 /** Configurações do usuário persistidas em localStorage. */
 export interface Settings {
   boxFormat: BoxFormat;
+  /** Escala da caixa (tamanho) — independente do `boxFormat` (conteúdo). */
+  boxSize: BoxSize;
   baseLayer: BaseLayerId;
   /** Anima o sentido da vazão do rio (faixa "correndo"). */
   riverFlowAnimation: boolean;
@@ -14,6 +16,7 @@ export interface Settings {
 
 const DEFAULTS: Settings = {
   boxFormat: "default",
+  boxSize: "padrao",
   baseLayer: "gray",
   riverFlowAnimation: true,
 };
@@ -28,6 +31,9 @@ function load(): Settings {
       boxFormat: (BOX_FORMATS as string[]).includes(parsed.boxFormat as string)
         ? (parsed.boxFormat as BoxFormat)
         : DEFAULTS.boxFormat,
+      boxSize: (BOX_SIZES as string[]).includes(parsed.boxSize as string)
+        ? (parsed.boxSize as BoxSize)
+        : DEFAULTS.boxSize,
       baseLayer: (BASE_LAYERS as string[]).includes(parsed.baseLayer as string)
         ? (parsed.baseLayer as BaseLayerId)
         : DEFAULTS.baseLayer,

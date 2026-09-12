@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, useMap, useMapEvent } from "react-leaflet";
 import L from "leaflet";
 import RiversLayer from "@/components/RiversLayer";
 import StationsLayer from "@/components/StationsLayer";
-import type { BoxFormat } from "@/lib/boxFormat";
+import type { BoxFormat, BoxSize } from "@/lib/boxFormat";
 import type { LevelClass } from "@/lib/classification";
 import type { BaseLayerId } from "@/hooks/useSettings";
 import type { LatLngTuple } from "@/hooks/useStationPositions";
@@ -29,10 +29,13 @@ const STATIONS_BOUNDS = L.latLngBounds(
 interface MapViewProps {
   selectedId: number | null;
   boxFormat: BoxFormat;
+  boxSize: BoxSize;
   baseLayer: BaseLayerId;
   riverFlow: boolean;
   hoveredLevel: LevelClass | null;
   hiddenLevels: Set<LevelClass>;
+  /** Esconde caixas sem leitura na janela — só durante o print. */
+  hideNoData: boolean;
   /** Posições ajustadas manualmente (arrastadas) — vencem o layout automático. */
   overrides: Record<number, LatLngTuple>;
   /** null = agora (ao vivo); data fixa = janela de 6h congelada nela. */
@@ -73,10 +76,12 @@ function FitToStations({ recenterKey }: { recenterKey: number }) {
 export default function MapView({
   selectedId,
   boxFormat,
+  boxSize,
   baseLayer,
   riverFlow,
   hoveredLevel,
   hiddenLevels,
+  hideNoData,
   overrides,
   referenceDate,
   recenterKey,
@@ -137,7 +142,9 @@ export default function MapView({
       <StationsLayer
         selectedId={selectedId}
         boxFormat={boxFormat}
+        boxSize={boxSize}
         hoveredLevel={hoveredLevel}
+        hideNoData={hideNoData}
         hiddenLevels={hiddenLevels}
         overrides={overrides}
         referenceDate={referenceDate}

@@ -53,6 +53,10 @@ export default function StationModal({ stationId, onClose }: StationModalProps) 
   const series = history.data?.get(stationId) ?? null;
   const thresholds = byId.get(stationId)?.thresholds ?? {};
   const loading = history.isLoading || history.isFetching;
+  // Prefixo da API (correto) quando disponível; só cai pro estático
+  // (`station.prefix`, que tem registros corrompidos — ver `stations.ts`)
+  // se a janela consultada não trouxe nenhuma leitura ainda.
+  const prefix = series?.prefix ?? station.prefix;
 
   return (
     <div
@@ -66,7 +70,7 @@ export default function StationModal({ stationId, onClose }: StationModalProps) 
         <header className="station-modal__head">
           <div className="station-modal__title">
             <h2 className="station-modal__name">{station.name}</h2>
-            <p className="station-modal__prefix">{station.prefix}</p>
+            <p className="station-modal__prefix">{prefix}</p>
             <p className="station-modal__coords">
               {station.lat.toFixed(5)}, {station.lng.toFixed(5)}
             </p>
