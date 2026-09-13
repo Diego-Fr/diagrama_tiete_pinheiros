@@ -1,6 +1,37 @@
+/* Fonte própria (auto-hospedada, não depende de CDN nenhum) — o motivo
+   real do texto (título do topo, nome dos rios) saindo feio em produção:
+   `system-ui` não é uma fonte de verdade, é um alias que o navegador troca
+   pela fonte de UI do SISTEMA OPERACIONAL — em ambientes sem uma fonte de
+   UI bem cuidada (Linux com fontconfig básico, servidor sem fontes de
+   qualidade instaladas, etc.) isso cai pra alguma fonte genérica feia. Em
+   dev, a máquina de quem testa geralmente já tem uma fonte de sistema
+   decente (Segoe UI/San Francisco/Cantarell bem configurada), escondendo o
+   problema — só aparece em produção, com o parque de máquinas variado de
+   verdade. Fix definitivo: parar de depender do que o SO tem instalado —
+   Inter (variável, cobre 100–900 num arquivo só, self-hosted em
+   `src/assets/fonts/`, licença OFL). Duas faces (`normal`/`italic`) pra
+   `.river-label`/`.flow-river-label` (itálico) renderizarem de verdade, em
+   vez do itálico sintético (glifo "espremido" via transform) que o
+   navegador desenha quando só existe a face reta — geralmente pior ainda
+   que o "system-ui" errado sozinho. */
+@font-face {
+  font-family: "Inter Variable";
+  src: url("./assets/fonts/InterVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter Variable";
+  src: url("./assets/fonts/InterVariable-Italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+  font-family: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
   line-height: 1.5;
   color-scheme: light dark;
   /* Escala da caixa de posto (config. "Tamanho da caixa") — 1 = padrão.
@@ -17,6 +48,32 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Causa real do "Fluxograma"/rótulo de rio saindo feio: NENHUM dos dois
+   herdava o `font-family` do `:root` de verdade.
+   - `button`/`input`/etc. têm um font PRÓPRIO no stylesheet do navegador
+     (não "inherit" — é um bug clássico de toda a plataforma web, não só
+     deste app), então `.app-title-menu__trigger` (é um `<button>`) e tudo
+     dentro dele (`.app-title-menu__label`) usava o default do navegador,
+     não o `:root`. `font-family: inherit` aqui resolve pra sempre — não só
+     esses dois, qualquer botão/campo futuro no app também já nasce certo.
+   - `.river-label` (marker do Leaflet) tem font DIFERENTE, e essa vem do
+     PRÓPRIO `leaflet.css` (`.leaflet-container { font-family: "Helvetica
+     Neue", Arial, Helvetica, sans-serif; }`, "tipografia geral" da lib) —
+     confirmado lendo o arquivo real em node_modules. Mesma especificidade
+     do nosso seletor abaixo, mas import do Leaflet vem ANTES do
+     `index.css` no `main.tsx`, então a nossa regra (mesma especificidade,
+     depois na ordem) vence e todo o mapa (caixas, popups, rótulos de rio)
+     passa a herdar do `:root` também. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+.leaflet-container {
+  font-family: inherit;
 }
 
 html,
