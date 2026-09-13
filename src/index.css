@@ -407,6 +407,22 @@ body {
 .flow-root .react-flow__attribution {
   display: none;
 }
+/* Bug real achado 2026-09-12: o `<Background>` do React Flow usa
+   `z-index:-1` (pensado só pra ficar atrás dos nodes/edges) — mas como
+   `.flow-card` (o pai mais próximo com `position`) tem fundo BRANCO OPACO,
+   um z-index negativo afunda a bolinha pra TRÁS do próprio fundo do card,
+   ficando 100% invisível na tela (mesmo com `opacity:1`/`visibility:visible`
+   confirmados via computed style — o problema é STACKING, não visibilidade
+   em si). O print (html-to-image) não reproduz esse detalhe de stacking do
+   jeito certo, e "sem querer" mostrava as bolinhas na imagem exportada —
+   dando a falsa impressão de que só apareciam no print. Fix: sobrescrever
+   pra `z-index:0`, que ainda fica atrás dos nodes/edges (ordem normal do
+   DOM desempata a favor de quem vem depois), mas na FRENTE do fundo branco
+   do `.flow-card` (que é o "chão" da stacking context, abaixo de tudo que
+   tem z-index >= 0). */
+.flow-root .react-flow__background {
+  z-index: 0;
+}
 /* Wrapper do nó de posto no fluxo — SEGURO dar position:relative aqui (não é
    o elemento posicionado pelo React Flow em si, é só o conteúdo por dentro;
    diferente do `.station-box-wrapper` do mapa, que É o elemento do Leaflet e
@@ -1654,6 +1670,33 @@ body {
 }
 
 /* ===========================================================================
+   Logos (SP Águas em cima, SIBH embaixo) — canto inferior direito do mapa
+   =========================================================================== */
+.map-agency-logo {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 1250;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.map-agency-logo__spaguas {
+  width: 130px;
+  height: auto;
+  filter: drop-shadow(0 1px 3px rgba(15, 23, 42, 0.35));
+}
+.map-agency-logo__sibh {
+  width: 100px;
+  height: auto;
+  /* wordmark é branco (feito pro fundo azul do LoginModal) — aqui o fundo é
+     claro, então vira preto (mesma cor do texto da logo da SP Águas). */
+  filter: brightness(0) drop-shadow(0 1px 2px rgba(15, 23, 42, 0.35));
+}
+
+/* ===========================================================================
    Seletor de camada base (canto inferior esquerdo, estilo Google Maps)
    =========================================================================== */
 .baselayer-switcher {
@@ -1804,19 +1847,45 @@ body {
 }
 
 /* ===========================================================================
-   Diagrama de fluxo (React Flow) — nome do rio sobre o cano + animação de
-   vazão, mesma ideia do RiversLayer no mapa.
+   Diagrama de fluxo (React Flow) — nome do rio ao LADO do cano (não mais em
+   cima — pedido do usuário, 2026-09-12: "remove de dentro do curso e
+   coloca do lado com uma cor escura, vai ficar mais visível") + animação
+   de vazão, mesma ideia do RiversLayer no mapa.
    =========================================================================== */
 .flow-river-label {
   font-size: 12px;
   font-weight: 800;
   font-style: italic;
   letter-spacing: 0.04em;
-  color: #ffffff;
+  /* Mesmo azul do `.river-label` do mapa — antes era branco, porque ficava
+     em cima do cano azul; agora que fica ao lado (fundo branco do card),
+     precisa de cor escura pra ler direito. */
+  color: #1e5fbf;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff;
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
 }
+/* Logos como elemento do diagrama — SP Águas centralizada embaixo dos
+   afluentes do Tietê, SIBH logo abaixo dela (pedido do usuário,
+   2026-09-13, ver `FLOW_LOGO_POSITION`/`FLOW_SIBH_LOGO_POSITION` em
+   flowDiagram.ts). */
+.flow-agency-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+.flow-agency-logo--sibh {
+  /* wordmark é branco (feito pro fundo azul do LoginModal) — aqui o fundo
+     é claro (card do diagrama), então vira preto, mesma cor do texto da
+     logo da SP Águas. */
+  filter: brightness(0);
+}
+
 /* faixa clara "correndo" sobre o cano — todo cano do fluxo foi montado no
    sentido jusante→montante (ver flowDiagram.ts), o oposto do fluxo real da
    água, por isso a animação já sai sempre invertida (`reverse`). */

@@ -103,16 +103,19 @@ async function main() {
       const page = await browser.newPage();
       await page.setViewport({ width: vp.width, height: vp.height });
       await page.goto(BASE_URL, { waitUntil: "networkidle2", timeout: 30000 });
+      // `.station-box-wrapper` (sem qualificar com `.leaflet-marker-icon`) —
+      // a classe é compartilhada entre a caixa do mapa (Leaflet) e a do
+      // fluxo (React Flow); em telas estreitas o app abre direto no
+      // diagrama (default mobile, 2026-09-12), então esse seletor genérico
+      // funciona pras duas views sem precisar saber qual está ativa.
       await page
-        .waitForSelector(".leaflet-marker-icon.station-box-wrapper", {
-          timeout: 15000,
-        })
+        .waitForSelector(".station-box-wrapper", { timeout: 15000 })
         .catch(() => {});
       await sleep(1000); // tiles/animações assentarem
 
       await page.screenshot({ path: path.join(dir, "01-mapa.png") });
 
-      const box = await page.$(".leaflet-marker-icon.station-box-wrapper");
+      const box = await page.$(".station-box-wrapper");
       if (box) {
         await box.click();
         await page

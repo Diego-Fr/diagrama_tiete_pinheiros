@@ -44,8 +44,11 @@ const OFF = 90;
 // ---- Tronco do Rio Tietê: 13 pontos no cano, oeste=jusante → leste=montante.
 //      Espaçamento uniforme (170px) exceto nos pares de barragem (Móvel:
 //      índices 1-2; Penha: índices 5-6), bem mais próximos entre si — é
-//      onde a barragem física fica. ----
-const TRUNK_X = [0, 170, 270, 440, 610, 780, 880, 1050, 1220, 1390, 1560, 1730, 1900];
+//      onde a barragem física fica; e o índice 7 (São Miguel, prefixo 508),
+//      puxado mais pra direita (perto do Jardim Helena, índice 8) a pedido
+//      do usuário (2026-09-13) — mantém a ordem (ainda antes do Jardim
+//      Helena, que é mais a leste de verdade: -46.4158 vs -46.4231). ----
+const TRUNK_X = [0, 170, 270, 440, 610, 780, 880, 1150, 1220, 1390, 1560, 1730, 1900];
 const TRUNK_STATION_IDS = [
   33673, // 0 Santana de Parnaíba
   // 1-2: Montante (upstream) fica ANTES da barragem no sentido do fluxo —
@@ -132,7 +135,8 @@ export const FLOW_JUNCTIONS: FlowJunction[] = [
   { id: "j-jacu-0", x: 1017, y: TRUNK_Y }, // confluência Córrego Jacú × Tietê
   { id: "j-jacu-1", x: 1017, y: 600 }, // fim do cano
   { id: "j-baquirivu-0", x: 948, y: TRUNK_Y }, // confluência Baquirivu × Tietê
-  { id: "j-baquirivu-1", x: 948, y: 200 }, // fim do cano
+  { id: "j-baquirivu-1", x: 948, y: 200 }, // altura do posto (leader sai daqui)
+  { id: "j-baquirivu-2", x: 948, y: 140 }, // cano continua (só visual) — dá espaço pro nome do rio
 
   // ---- Afluentes só informativos (sem posto — não tem telemetria pra
   //      eles) — Aricanduva/Tiquatira/Itaquera/Tujuco Preto existem no
@@ -208,6 +212,7 @@ export const FLOW_PIPES: FlowPipe[] = [
 
   // Rio Baquirivu — só 1 posto, ao norte do tronco.
   { id: "p-baquirivu-0", from: "j-baquirivu-0", to: "j-baquirivu-1", river: "baquirivu" },
+  { id: "p-baquirivu-1", from: "j-baquirivu-1", to: "j-baquirivu-2", river: "baquirivu" },
 
   // Afluentes só informativos — sem posto, só o cano + nome (ver nota em
   // FLOW_JUNCTIONS).
@@ -253,18 +258,40 @@ export interface FlowRiverLabel {
   angle: number;
 }
 
+/** Distância (px, centro-a-centro) do rótulo até o próprio cano — fora da
+ * linha, não mais em cima dela (pedido do usuário, 2026-09-12: "remove de
+ * dentro do curso e coloca do lado"). Regra: linha vertical → rótulo à
+ * ESQUERDA; linha horizontal (tronco) → rótulo EM CIMA. Única exceção:
+ * Itaquera/Jacú ficam um do lado do outro (x=1035/1017, só 18px de vão) —
+ * se os dois fossem pra esquerda (regra padrão), colidiriam; Itaquera vai
+ * pra DIREITA (o lado de fora, afastando dos dois), Jacú mantém a regra
+ * padrão (esquerda, que já era o lado de fora dele).
+ * Valor calculado pra deixar ~2px de vão visual (não grudado, mas bem
+ * perto — pedido do usuário): metade da espessura do cano (`strokeWidth:
+ * 10` em `PipeEdge.tsx` → 5) + metade da espessura do próprio rótulo
+ * (~18px de linha de texto → 9) + 2px de vão = 16. */
+const LABEL_OFFSET = 16;
+
 export const FLOW_RIVER_LABELS: FlowRiverLabel[] = [
-  { id: "lbl-tiete-0", text: "RIO TIETÊ", x: 500, y: TRUNK_Y, angle: 0 },
-  { id: "lbl-tiete-1", text: "RIO TIETÊ", x: 1560, y: TRUNK_Y, angle: 0 },
-  { id: "lbl-pinheiros", text: "RIO PINHEIROS", x: 245, y: 900, angle: -90 },
-  { id: "lbl-tamanduatei", text: "RIO TAMANDUATEÍ", x: 555, y: 580, angle: -90 },
-  { id: "lbl-jacu", text: "CÓRREGO JACÚ", x: 1017, y: 500, angle: -90 },
-  { id: "lbl-baquirivu", text: "RIO BAQUIRIVU", x: 948, y: 300, angle: -90 },
+  { id: "lbl-tiete-0", text: "RIO TIETÊ", x: 500, y: TRUNK_Y - LABEL_OFFSET, angle: 0 },
+  { id: "lbl-tiete-1", text: "RIO TIETÊ", x: 1560, y: TRUNK_Y - LABEL_OFFSET, angle: 0 },
+  { id: "lbl-pinheiros", text: "RIO PINHEIROS", x: 245 - LABEL_OFFSET, y: 900, angle: -90 },
+  { id: "lbl-tamanduatei", text: "RIO TAMANDUATEÍ", x: 555 - LABEL_OFFSET, y: 580, angle: -90 },
+  { id: "lbl-jacu", text: "CÓRREGO JACÚ", x: 1017 - LABEL_OFFSET, y: 500, angle: -90 },
+  // Exceção: fica à DIREITA do cano (pedido do usuário, 2026-09-13) — os
+  // demais afluentes verticais vão à esquerda, mas esse é o único que sobe
+  // pro NORTE (não desce), e a régua no cano foi alongada até y=140 (ver
+  // FLOW_JUNCTIONS `j-baquirivu-2`) só pra abrir espaço vertical suficiente
+  // pro rótulo sem esbarrar no tronco (y=400) nem estourar a borda do
+  // diagrama no print.
+  { id: "lbl-baquirivu", text: "RIO BAQUIRIVU", x: 948 + LABEL_OFFSET, y: 270, angle: -90 },
   // Afluentes só informativos (sem posto — ver nota em FLOW_JUNCTIONS).
-  { id: "lbl-aricanduva", text: "R. ARICANDUVA", x: 660, y: 600, angle: -90 },
-  { id: "lbl-tiquatira", text: "RIB. TIQUATIRA", x: 720, y: 600, angle: -90 },
-  { id: "lbl-itaquera", text: "RIO ITAQUERA", x: 1035, y: 600, angle: -90 },
-  { id: "lbl-tujucopreto", text: "CÓR. TUJUCO PRETO", x: 1470, y: 600, angle: -90 },
+  { id: "lbl-aricanduva", text: "R. ARICANDUVA", x: 660 - LABEL_OFFSET, y: 600, angle: -90 },
+  { id: "lbl-tiquatira", text: "RIB. TIQUATIRA", x: 720 - LABEL_OFFSET, y: 600, angle: -90 },
+  // Exceção: Itaquera vai pra DIREITA (ver nota acima) — evita colidir com
+  // o Jacú, que fica só 18px à esquerda dele (x=1017).
+  { id: "lbl-itaquera", text: "RIO ITAQUERA", x: 1035 + LABEL_OFFSET, y: 600, angle: -90 },
+  { id: "lbl-tujucopreto", text: "CÓR. TUJUCO PRETO", x: 1470 - LABEL_OFFSET, y: 600, angle: -90 },
 ];
 
 /** Posição de cada barragem no esquema (só existem no fluxo — não têm
@@ -286,3 +313,16 @@ export const FLOW_BARRAGE_POSITIONS: FlowBarragePosition[] = [
 export const FLOW_BARRAGE_POSITION_BY_ID = new Map(
   FLOW_BARRAGE_POSITIONS.map((p) => [p.barrageId, p] as const),
 );
+
+/** Logo da SP Águas, como elemento do próprio diagrama (pedido do usuário,
+ * 2026-09-13) — centralizado embaixo dos afluentes do Tietê. `x` = meio do
+ * tronco (0 a 1900); `y` ajustado a partir de um print que o usuário
+ * marcou com a área desejada (a 1ª posição, y=1320, tinha ficado um pouco
+ * abaixo do que ele queria). */
+export const FLOW_LOGO_POSITION = { x: 950, y: 1030 };
+
+/** Logo do SIBH, embaixo da SP Águas (pedido do usuário, 2026-09-13 — o
+ * print não carrega a navbar, então sem isso a imagem exportada não tem
+ * referência explícita ao SIBH). Mesmo `x`; `y` = abaixo da SP Águas
+ * (centro 1030 + metade da altura dela, 119/2 ≈ 60) + ~20px de respiro. */
+export const FLOW_SIBH_LOGO_POSITION = { x: 950, y: 1135 };

@@ -3,6 +3,7 @@ import MapView from "@/components/MapView";
 import FlowView from "@/components/FlowView";
 import AppNavbar from "@/components/AppNavbar";
 import AppTitleMenu from "@/components/AppTitleMenu";
+import AgencyLogo from "@/components/AgencyLogo";
 import BaseLayerSwitcher from "@/components/BaseLayerSwitcher";
 import MapControls from "@/components/MapControls";
 import MapDateCard from "@/components/MapDateCard";
@@ -32,8 +33,16 @@ function waitTwoFrames(): Promise<void> {
 export default function App() {
   const shellRef = useRef<HTMLDivElement>(null);
   // Mapa geográfico (Leaflet) ↔ diagrama de fluxo (React Flow) — trocado
-  // pelo ViewSwitcher ao lado do título.
-  const [view, setView] = useState<AppView>("map");
+  // pelo ViewSwitcher ao lado do título. Padrão é "map", EXCETO em telas
+  // estreitas (mesmo breakpoint mobile do resto do app, 760px) — o mapa
+  // geográfico não fica bom no celular (pedido do usuário, 2026-09-12);
+  // só decide uma vez, no mount — não força a troca se o usuário girar o
+  // celular ou redimensionar depois, só a abertura inicial.
+  const [view, setView] = useState<AppView>(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches
+      ? "flow"
+      : "map",
+  );
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // Barragem selecionada no fluxo (Barragem Móvel/da Penha) — mutuamente
   // exclusiva com `selectedId`: só uma sidebar aberta por vez.
@@ -99,10 +108,12 @@ export default function App() {
     setSelectedBarrageId(id);
   };
 
-  // Clique em área vazia do mapa: fecha as sidebars e sinaliza o popover de
+  // Clique em área vazia do mapa/diagrama: fecha as sidebars (posto/barragem
+  // E configurações — pedido do usuário, 2026-09-13) e sinaliza o popover de
   // data (que se fecha ao observar o closeSignal mudar).
   const handleMapClick = () => {
     closeSelections();
+    setSettingsOpen(false);
     setMapClickTick((t) => t + 1);
   };
 
@@ -175,6 +186,7 @@ export default function App() {
             hoveredLevel={hoveredLevel}
             hiddenLevels={hiddenLevels}
             hideNoData={capturing}
+            capturing={capturing}
             onPaneClick={handleMapClick}
           />
         ) : (
@@ -200,6 +212,7 @@ export default function App() {
               value={settings.baseLayer}
               onChange={(id) => setSetting("baseLayer", id)}
             />
+            <AgencyLogo />
           </>
         )}
 

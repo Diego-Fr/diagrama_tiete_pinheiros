@@ -9,5 +9,5 @@ export interface DiagramOption {
  * entram nesta lista.
  */
 export const AVAILABLE_DIAGRAMS: DiagramOption[] = [
-  { id: "tiete-pinheiros", label: "SIBH – Diagrama Tietê / Pinheiros" },
+  { id: "tiete-pinheiros", label: "Diagrama Tietê / Pinheiros" },
 ];

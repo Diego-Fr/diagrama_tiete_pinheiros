@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Background,
   Controls,
@@ -7,6 +7,8 @@ import {
   type Node,
   type NodeTypes,
   type EdgeTypes,
+  type ReactFlowInstance,
+  type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { fluviometricStations } from "@/data/stations";
@@ -17,13 +19,16 @@ import {
   FLOW_BARRAGE_POSITION_BY_ID,
   FLOW_JUNCTIONS,
   FLOW_LEADERS,
+  FLOW_LOGO_POSITION,
   FLOW_PIPES,
   FLOW_POSITION_BY_STATION_ID,
   FLOW_RIVER_LABELS,
+  FLOW_SIBH_LOGO_POSITION,
   endpointNodeId,
 } from "@/config/flowDiagram";
 import { useStationStatus } from "@/hooks/useStationStatus";
 import { useDamStatus } from "@/hooks/useDamStatus";
+import AgencyLogoNode, { type AgencyLogoNodeType } from "@/components/flow/AgencyLogoNode";
 import AnchorNode from "@/components/flow/AnchorNode";
 import BarrageNode, { type BarrageNode as BarrageNodeType } from "@/components/flow/BarrageNode";
 import PipeEdge, { type PipeEdgeData } from "@/components/flow/PipeEdge";
@@ -37,6 +42,7 @@ const nodeTypes: NodeTypes = {
   anchor: AnchorNode,
   riverLabel: RiverLabelNode,
   barrage: BarrageNode,
+  agencyLogo: AgencyLogoNode,
 };
 const edgeTypes: EdgeTypes = { pipe: PipeEdge };
 
@@ -49,14 +55,60 @@ const ANCHOR_NODES: Node[] = FLOW_JUNCTIONS.map((j) => ({
   data: {},
 }));
 
-const LABEL_NODES: Node[] = FLOW_RIVER_LABELS.map((l) => ({
-  id: l.id,
-  type: "riverLabel",
-  position: { x: l.x, y: l.y },
+const LOGO_NODE: AgencyLogoNodeType = {
+  id: "agency-logo",
+  type: "agencyLogo",
+  position: FLOW_LOGO_POSITION,
+  width: 180,
+  height: 119,
   draggable: false,
   selectable: false,
-  data: { text: l.text, angle: l.angle },
-}));
+  data: { variant: "spaguas" },
+};
+
+// Wordmark SIBH (123×38 de proporção) um pouco menor que a da SP Águas.
+const SIBH_LOGO_NODE: AgencyLogoNodeType = {
+  id: "sibh-logo",
+  type: "agencyLogo",
+  position: FLOW_SIBH_LOGO_POSITION,
+  width: 140,
+  height: 43,
+  draggable: false,
+  selectable: false,
+  data: { variant: "sibh" },
+};
+
+/**
+ * O React Flow mede o node pela caixa NÃO rotacionada (o `transform:
+ * rotate()` do `.flow-river-label` é só visual) — sem isso, o `fitView`
+ * "acha" que um rótulo vertical ocupa uma caixa larga e baixa (o texto
+ * antes de girar), não a alta e fina que aparece de verdade, e deixa
+ * rótulo perto da borda (ex.: "RIO BAQUIRIVU") sair cortado no print.
+ * `width`/`height` explícitos no node (estimados a partir do nº de
+ * caracteres) corrigem a conta pro `fitView` de verdade — já JÁ
+ * TROCADOS (largo↔alto) pros rótulos verticais (`angle === -90`).
+ */
+function estimateLabelSize(text: string, angle: number): { width: number; height: number } {
+  const textLength = text.length * 8.6 + 16; // ~fonte 12px negrito itálico + letter-spacing
+  const thickness = 18; // altura de uma linha só
+  return angle === 0
+    ? { width: textLength, height: thickness }
+    : { width: thickness, height: textLength };
+}
+
+const LABEL_NODES: Node[] = FLOW_RIVER_LABELS.map((l) => {
+  const { width, height } = estimateLabelSize(l.text, l.angle);
+  return {
+    id: l.id,
+    type: "riverLabel",
+    position: { x: l.x, y: l.y },
+    width,
+    height,
+    draggable: false,
+    selectable: false,
+    data: { text: l.text, angle: l.angle },
+  };
+});
 
 const ALL_EDGE_DEFS = [
   ...FLOW_PIPES.map((p) => ({ ...p, kind: "pipe" as const })),
@@ -81,6 +133,12 @@ interface FlowViewProps {
   /** Esconde caixas sem nenhuma leitura na janela (mostrando "—") — usado só
    * durante o print (botão de câmera), pra não sair no PNG com traço. */
   hideNoData: boolean;
+  /** Igual a `hideNoData` (mesmo `capturing` do App.tsx) — separado porque
+   * aciona outra coisa: reenquadra o canvas (fitView) antes do print, pra
+   * sair sempre com o diagrama inteiro visível, não o zoom/pan que o
+   * usuário tinha no momento (pedido do usuário, 2026-09-12). Some da tela
+   * de volta ao zoom/pan original depois que a imagem é gerada. */
+  capturing: boolean;
   /** Clique em área vazia do canvas. */
   onPaneClick: () => void;
 }
@@ -102,10 +160,34 @@ export default function FlowView({
   hoveredLevel,
   hiddenLevels,
   hideNoData,
+  capturing,
   onPaneClick,
 }: FlowViewProps) {
   const { byId } = useStationStatus(referenceDate);
   const { data: damData } = useDamStatus();
+
+  // Reenquadra (fitView) só na hora do print, pra sair sempre com o
+  // diagrama inteiro visível, o mais próximo possível — não o zoom/pan que
+  // o usuário tinha no momento (pode estar olhando só um pedaço). Guarda o
+  // viewport de antes pra devolver depois que a imagem já foi gerada (o
+  // `capturing` só vira `false` no `finally` do `handleCapture`, ou seja,
+  // DEPOIS do `downloadElementAsPng` já ter capturado o DOM reenquadrado).
+  const rfInstanceRef = useRef<ReactFlowInstance<Node, Edge<PipeEdgeData>> | null>(null);
+  const savedViewportRef = useRef<Viewport | null>(null);
+  useEffect(() => {
+    const inst = rfInstanceRef.current;
+    if (!inst) return;
+    if (capturing) {
+      savedViewportRef.current = inst.getViewport();
+      // `width`/`height` explícitos nos LABEL_NODES (ver `estimateLabelSize`)
+      // já corrigem a caixa que o fitView usa pros rótulos de rio — esse
+      // padding aqui é só uma folga pequena de segurança.
+      inst.fitView({ padding: 0.07, duration: 0 });
+    } else if (savedViewportRef.current) {
+      inst.setViewport(savedViewportRef.current, { duration: 0 });
+      savedViewportRef.current = null;
+    }
+  }, [capturing]);
 
   const nodes: Node[] = useMemo(() => {
     let fallbackIndex = 0;
@@ -168,7 +250,7 @@ export default function FlowView({
       };
     });
 
-    return [...ANCHOR_NODES, ...LABEL_NODES, ...stationNodes, ...barrageNodes];
+    return [...ANCHOR_NODES, ...LABEL_NODES, ...stationNodes, ...barrageNodes, LOGO_NODE, SIBH_LOGO_NODE];
   }, [
     byId,
     damData,
@@ -212,9 +294,24 @@ export default function FlowView({
           nodesConnectable={false}
           elementsSelectable={false}
           onPaneClick={onPaneClick}
+          onInit={(instance) => {
+            rfInstanceRef.current = instance;
+          }}
           proOptions={{ hideAttribution: true }}
         >
-          <Background gap={24} color="#e2e8f0" />
+          {/* `color`/`size` mais fortes que o default AO VIVO — o cinza
+              clarinho original (#e2e8f0, raio ~1) ficava quase
+              imperceptível no zoom/tamanho de tela normal. No PRINT, porém,
+              o mesmo tom mais forte fica "forte demais" (achado do usuário)
+              — e a config antiga (clarinha) já saía boa no PNG exportado
+              desde sempre (só não aparecia AO VIVO, por causa do bug de
+              z-index já corrigido). Por isso o print usa os valores
+              originais, só ao vivo fica mais forte. */}
+          <Background
+            gap={24}
+            size={capturing ? 1 : 2.2}
+            color={capturing ? "#e2e8f0" : "#94a3b8"}
+          />
           <Controls showInteractive={false} />
         </ReactFlow>
       </div>
