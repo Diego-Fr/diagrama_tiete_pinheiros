@@ -1,0 +1,8 @@
+services:
+  diagrama-tiete:
+    build: .
+    restart: unless-stopped
+    # Só loopback (127.0.0.1) — não expõe pra rede/internet, só pro nginx
+    # do próprio host achar via reverse proxy (proxy_pass pro 127.0.0.1:7000).
+    ports:
+      - "127.0.0.1:7000:80"

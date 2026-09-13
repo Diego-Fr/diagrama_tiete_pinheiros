@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from "react";
 export type AppView = "map" | "flow";
 
 const VIEW_OPTIONS: { id: AppView; label: string }[] = [
-  { id: "map", label: "Mapa" },
-  { id: "flow", label: "Fluxo" },
+  { id: "map", label: "Mapa Hidrográfico" },
+  { id: "flow", label: "Diagrama" },
 ];
 
 interface ViewSwitcherProps {

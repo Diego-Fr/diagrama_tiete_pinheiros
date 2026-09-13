@@ -1,13 +1,15 @@
+import { API_BASE } from "@/api/base";
+
 /**
  * Salvar um evento de barragem (mudança de situação das comportas) —
- * `POST /dams/events`. **Ainda não existe em produção** (só no servidor
- * local de teste do usuário, `localhost:11000`) — por isso essa rota NÃO
- * passa pelo proxy `/sibh` do Vite (que aponta pra
- * `apps.spaguas.sp.gov.br`), vai direto pro host local. Quando a rota for
- * publicada de verdade, isso passa a valer o mesmo tratamento das outras
- * (`API_BASE`/proxy).
+ * `POST /v2/dams/events`, mesmo padrão same-origin/proxy das outras rotas
+ * v2 (`API_BASE`, ver `src/api/base.ts`) — same-origin em produção,
+ * proxy do Vite (`/sibh` → `apps.spaguas.sp.gov.br`) em dev. Testada
+ * primeiro contra um servidor local só de desenvolvimento
+ * (`localhost:11000/dams/events`, sem prefixo) até o usuário confirmar que
+ * o salvamento estava correto; publicada de verdade em
+ * `/sibh/api/v2/dams/events`, mesmo host/base de tudo mais.
  */
-const DAM_EVENTS_BASE = "http://localhost:11000";
 
 /** `event_type_id` pro tipo "mudança de status das comportas" (único usado
  * até agora, valor fixo passado pelo usuário). */
@@ -28,7 +30,7 @@ export interface CreateDamEventInput {
  * `options`). Precisa do mesmo bearer token da sessão (`useAuth`).
  */
 export async function createDamEvent(input: CreateDamEventInput, token: string): Promise<void> {
-  const res = await fetch(`${DAM_EVENTS_BASE}/dams/events`, {
+  const res = await fetch(`${API_BASE}/v2/dams/events`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

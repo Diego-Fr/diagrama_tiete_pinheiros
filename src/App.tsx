@@ -150,15 +150,18 @@ export default function App() {
           />
         </div>
 
-        {/* Seletor de data — comum às duas visões (mapa e fluxo usam a
-            mesma `referenceDate`, pedido do usuário: "os dois contextos
-            até podem usar a mesma data, não vejo problema"). */}
+        {/* Seletor de data e barra de auto-refresh — comuns às duas visões
+            (mapa e fluxo usam a mesma `referenceDate`, pedido do usuário:
+            "os dois contextos até podem usar a mesma data, não vejo
+            problema"; a barra também foi pedida explicitamente pro
+            fluxograma). */}
         <MapDateCard
           referenceDate={referenceDate}
           onChange={setReferenceDate}
           closeSignal={mapClickTick}
           captureAsOf={captureAsOf}
         />
+        <RefreshBar referenceDate={referenceDate} />
 
         {view === "flow" ? (
           <FlowView
@@ -176,8 +179,6 @@ export default function App() {
           />
         ) : (
           <>
-            <RefreshBar referenceDate={referenceDate} />
-
             <MapView
               selectedId={selectedId}
               boxFormat={settings.boxFormat}

@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-ssr
+screenshots
+.git
+.vscode
+*.local
+*.log
+npm-debug.log*
+tsconfig.tsbuildinfo
+tsconfig.node.tsbuildinfo

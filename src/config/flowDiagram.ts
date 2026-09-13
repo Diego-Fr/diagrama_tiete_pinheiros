@@ -26,7 +26,7 @@
  * "leader" fino tracejado (mesmo padrão do mapa). O cano em si é feito de
  * pontos invisíveis (`FLOW_JUNCTIONS`) + segmentos (`FLOW_PIPES`).
  *
- * Cobre as 22 fluviométricas atuais (mesmo escopo do mapa). Sem estação nova
+ * Cobre as 21 fluviométricas atuais (mesmo escopo do mapa). Sem estação nova
  * aparecer nessa lista, ela não é desenhada no fluxo (fica só no mapa).
  */
 
@@ -45,9 +45,7 @@ const OFF = 90;
 //      Espaçamento uniforme (170px) exceto nos pares de barragem (Móvel:
 //      índices 1-2; Penha: índices 5-6), bem mais próximos entre si — é
 //      onde a barragem física fica. ----
-const TRUNK_X = [
-  0, 170, 270, 440, 610, 780, 880, 1050, 1220, 1390, 1560, 1730, 1900, 2070,
-];
+const TRUNK_X = [0, 170, 270, 440, 610, 780, 880, 1050, 1220, 1390, 1560, 1730, 1900];
 const TRUNK_STATION_IDS = [
   33673, // 0 Santana de Parnaíba
   // 1-2: Montante (upstream) fica ANTES da barragem no sentido do fluxo —
@@ -66,15 +64,9 @@ const TRUNK_STATION_IDS = [
   33771, // 7 São Miguel
   35335, // 8 Núcleo Jardim Helena
   35320, // 9 Núcleo Itaim Biacica
-  // 10: posto novo (2026-09-12) — prefixo 703, "Guarulhos (Rio Tietê - Jd.
-  // Guaracy)" — usuário confirmou que fica no Tietê, entre o Itaim Biacica
-  // e o córrego Tijuco Preto (afluente sem posto próprio, não desenhado).
-  // Bate com a lat/lng real: -46.398944, entre Itaim Biacica (-46.402684)
-  // e Jardim Romano (-46.385854).
-  33794, // 10 Guarulhos (Jd. Guaracy)
-  33212, // 11 Jardim Romano
-  35423, // 12 Itaquaquecetuba
-  33209, // 13 Mogi das Cruzes (Estaleiro)
+  33212, // 10 Jardim Romano
+  35423, // 11 Itaquaquecetuba
+  33209, // 12 Mogi das Cruzes (Estaleiro)
 ];
 
 const trunkJunctionId = (i: number) => `j-trunk-${i}`;
@@ -190,8 +182,8 @@ export interface FlowPipe {
  * entra em ângulo reto no tronco, sem curva, como no `example.png`.
  */
 export const FLOW_PIPES: FlowPipe[] = [
-  // Tronco do Tietê — 13 segmentos entre os 14 pontos, em sequência.
-  ...Array.from({ length: 13 }, (_, i) => ({
+  // Tronco do Tietê — 12 segmentos entre os 13 pontos, em sequência.
+  ...Array.from({ length: 12 }, (_, i) => ({
     id: `p-tiete-${i}`,
     from: trunkJunctionId(i),
     to: trunkJunctionId(i + 1),
