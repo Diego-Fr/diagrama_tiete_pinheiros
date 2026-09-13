@@ -13,7 +13,7 @@ import SettingsSidebar from "@/components/SettingsSidebar";
 import StationSidebar from "@/components/StationSidebar";
 import StationModal from "@/components/StationModal";
 import BarrageSidebar from "@/components/BarrageSidebar";
-import ViewSwitcher, { type AppView } from "@/components/ViewSwitcher";
+import ViewSwitcher from "@/components/ViewSwitcher";
 import { BOX_SIZE_SCALE } from "@/lib/boxFormat";
 import type { LevelClass } from "@/lib/classification";
 import { formatFileStampBR } from "@/lib/datetime";
@@ -32,17 +32,6 @@ function waitTwoFrames(): Promise<void> {
 
 export default function App() {
   const shellRef = useRef<HTMLDivElement>(null);
-  // Mapa geográfico (Leaflet) ↔ diagrama de fluxo (React Flow) — trocado
-  // pelo ViewSwitcher ao lado do título. Padrão é "map", EXCETO em telas
-  // estreitas (mesmo breakpoint mobile do resto do app, 760px) — o mapa
-  // geográfico não fica bom no celular (pedido do usuário, 2026-09-12);
-  // só decide uma vez, no mount — não força a troca se o usuário girar o
-  // celular ou redimensionar depois, só a abertura inicial.
-  const [view, setView] = useState<AppView>(() =>
-    typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches
-      ? "flow"
-      : "map",
-  );
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // Barragem selecionada no fluxo (Barragem Móvel/da Penha) — mutuamente
   // exclusiva com `selectedId`: só uma sidebar aberta por vez.
@@ -153,10 +142,10 @@ export default function App() {
         <div className="top-bar-left">
           <AppTitleMenu />
           <ViewSwitcher
-            value={view}
+            value={settings.view}
             onChange={(v) => {
               closeSelections();
-              setView(v);
+              setSetting("view", v);
             }}
           />
         </div>
@@ -174,7 +163,7 @@ export default function App() {
         />
         <RefreshBar referenceDate={referenceDate} />
 
-        {view === "flow" ? (
+        {settings.view === "flow" ? (
           <FlowView
             referenceDate={referenceDate}
             boxFormat={settings.boxFormat}
@@ -220,13 +209,13 @@ export default function App() {
           hidden={hiddenLevels}
           onHover={setHoveredLevel}
           onToggle={toggleLevel}
-          showBarrageItem={view === "flow"}
+          showBarrageItem={settings.view === "flow"}
         />
 
         <MapControls
           onOpenSettings={() => setSettingsOpen(true)}
-          onRecenter={view === "map" ? () => setRecenterTick((t) => t + 1) : undefined}
-          onResetPositions={view === "map" ? resetStationPositions : undefined}
+          onRecenter={settings.view === "map" ? () => setRecenterTick((t) => t + 1) : undefined}
+          onResetPositions={settings.view === "map" ? resetStationPositions : undefined}
           hasCustomPositions={Object.keys(stationOverrides).length > 0}
           onCapture={handleCapture}
           capturing={capturing}
