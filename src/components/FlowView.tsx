@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Background,
   Controls,
@@ -7,6 +7,7 @@ import {
   type Node,
   type NodeTypes,
   type EdgeTypes,
+  type OnNodeDrag,
   type ReactFlowInstance,
   type Viewport,
 } from "@xyflow/react";
@@ -139,6 +140,13 @@ interface FlowViewProps {
    * usuário tinha no momento (pedido do usuário, 2026-09-12). Some da tela
    * de volta ao zoom/pan original depois que a imagem é gerada. */
   capturing: boolean;
+  /** Posições arrastadas manualmente (por id do posto) — vencem a posição
+   * curada em `flowDiagram.ts`. Sistema de coordenadas PRÓPRIO do diagrama
+   * (x/y do esquema, não lat/lng) — não é o mesmo storage do mapa (pedido
+   * do usuário, 2026-09-13). */
+  overrides: Record<number, { x: number; y: number }>;
+  /** Usuário soltou a caixa numa nova posição — persistir. */
+  onDragStation: (stationId: number, pos: { x: number; y: number }) => void;
   /** Clique em área vazia do canvas. */
   onPaneClick: () => void;
 }
@@ -161,6 +169,8 @@ export default function FlowView({
   hiddenLevels,
   hideNoData,
   capturing,
+  overrides,
+  onDragStation,
   onPaneClick,
 }: FlowViewProps) {
   const { byId } = useStationStatus(referenceDate);
@@ -203,12 +213,17 @@ export default function FlowView({
             `Posto ${s.id} (${s.name}) sem posição em flowDiagram.ts — usando posição de reserva.`,
           );
         }
-        const { x, y } = pos ?? { x: -300, y: 400 + fallbackIndex++ * 60 };
+        const curated = pos ?? { x: -300, y: 400 + fallbackIndex++ * 60 };
+        // Posição arrastada (se houver) vence a curada — mesmo padrão do
+        // mapa (`overrides[id] ?? autoPos ?? anchor`), só que aqui não tem
+        // "auto layout", é curada ou arrastada.
+        const { x, y } = overrides[s.id] ?? curated;
         const dimmed = hoveredLevel != null && classification !== hoveredLevel;
         return {
           id: String(s.id),
           type: "station" as const,
           position: { x, y },
+          draggable: true,
           hidden: hiddenLevels.has(classification) || (hideNoData && status?.series == null),
           style: { opacity: dimmed ? 0.12 : 1, transition: "opacity 140ms ease" },
           data: {
@@ -240,6 +255,7 @@ export default function FlowView({
         id: `barrage-${b.id}`,
         type: "barrage",
         position: { x, y },
+        draggable: false,
         data: {
           barrageId: b.id,
           name: b.name,
@@ -262,6 +278,7 @@ export default function FlowView({
     hoveredLevel,
     hiddenLevels,
     hideNoData,
+    overrides,
   ]);
 
   const edges: Edge<PipeEdgeData>[] = useMemo(
@@ -278,6 +295,20 @@ export default function FlowView({
     [riverFlow],
   );
 
+  // Só postos são arrastáveis (`draggable:true` só em `stationNodes` —
+  // âncoras/rótulos/barragens/logos continuam `draggable:false`
+  // explícito). Persiste em `useFlowStationPositions` (App.tsx), storage
+  // próprio do diagrama.
+  const handleNodeDragStop: OnNodeDrag<Node> = useCallback(
+    (_event, node) => {
+      if (node.type !== "station") return;
+      const stationId = Number(node.id);
+      if (!Number.isFinite(stationId)) return;
+      onDragStation(stationId, { x: node.position.x, y: node.position.y });
+    },
+    [onDragStation],
+  );
+
   return (
     <div className="flow-root">
       <div className="flow-card">
@@ -290,9 +321,10 @@ export default function FlowView({
           fitView
           minZoom={0.15}
           maxZoom={2}
-          nodesDraggable={false}
+          nodesDraggable
           nodesConnectable={false}
           elementsSelectable={false}
+          onNodeDragStop={handleNodeDragStop}
           onPaneClick={onPaneClick}
           onInit={(instance) => {
             rfInstanceRef.current = instance;

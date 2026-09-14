@@ -20,6 +20,7 @@ import { formatFileStampBR } from "@/lib/datetime";
 import { downloadElementAsPng } from "@/lib/mapSnapshot";
 import { useAuth } from "@/hooks/useAuth";
 import { useSettings } from "@/hooks/useSettings";
+import { useFlowStationPositions } from "@/hooks/useFlowStationPositions";
 import { useStationPositions } from "@/hooks/useStationPositions";
 
 /** Espera 2 frames — deixa o React aplicar (e o navegador pintar) os ajustes
@@ -51,7 +52,8 @@ export default function App() {
   // null = agora (ao vivo); data fixa = janela de 6h congelada nela. Só o
   // mapa e a sidebar respeitam isso — o modal mantém sua própria lógica.
   const [referenceDate, setReferenceDate] = useState<Date | null>(null);
-  const { settings, setSetting } = useSettings();
+  const { view, setView, mapSettings, setMapSetting, flowSettings, setFlowSetting } =
+    useSettings();
   // Sessão única (não chamar `useAuth` de novo em outro componente — ver
   // comentário no próprio hook) — repassada pra navbar (mostrar "Bem-vindo")
   // e pra sidebar da barragem (autorizar toggle das comportas).
@@ -61,6 +63,14 @@ export default function App() {
     setPosition: setStationPosition,
     reset: resetStationPositions,
   } = useStationPositions();
+  // Posições arrastadas no DIAGRAMA — storage próprio, separado do mapa
+  // (pedido do usuário, 2026-09-13: mapa e diagrama não compartilham
+  // customização, são sistemas de coordenadas diferentes).
+  const {
+    overrides: flowStationOverrides,
+    setPosition: setFlowStationPosition,
+    reset: resetFlowStationPositions,
+  } = useFlowStationPositions();
 
   // Legenda interativa
   const [hoveredLevel, setHoveredLevel] = useState<LevelClass | null>(null);
@@ -126,13 +136,16 @@ export default function App() {
     }
   }, [capturing, referenceDate]);
 
+  // Configurações da view ATIVA (mapa/diagrama têm blobs independentes —
+  // ver `useSettings`) — cada componente abaixo lê só do seu próprio lado.
+  const activeSettings = view === "map" ? mapSettings : flowSettings;
   // Congela a animação de vazão durante o print — vale pro mapa e pro fluxo.
-  const effectiveRiverFlow = capturing ? false : settings.riverFlowAnimation;
+  const effectiveRiverFlow = capturing ? false : activeSettings.riverFlowAnimation;
 
   return (
     <div
       className="app-root"
-      style={{ "--box-scale": BOX_SIZE_SCALE[settings.boxSize] } as CSSProperties}
+      style={{ "--box-scale": BOX_SIZE_SCALE[activeSettings.boxSize] } as CSSProperties}
     >
       <AppNavbar auth={auth} />
       <div
@@ -142,10 +155,10 @@ export default function App() {
         <div className="top-bar-left">
           <AppTitleMenu />
           <ViewSwitcher
-            value={settings.view}
+            value={view}
             onChange={(v) => {
               closeSelections();
-              setSetting("view", v);
+              setView(v);
             }}
           />
         </div>
@@ -163,10 +176,10 @@ export default function App() {
         />
         <RefreshBar referenceDate={referenceDate} />
 
-        {settings.view === "flow" ? (
+        {view === "flow" ? (
           <FlowView
             referenceDate={referenceDate}
-            boxFormat={settings.boxFormat}
+            boxFormat={flowSettings.boxFormat}
             riverFlow={effectiveRiverFlow}
             selectedId={selectedId}
             onSelectStation={handleSelectStation}
@@ -176,15 +189,17 @@ export default function App() {
             hiddenLevels={hiddenLevels}
             hideNoData={capturing}
             capturing={capturing}
+            overrides={flowStationOverrides}
+            onDragStation={setFlowStationPosition}
             onPaneClick={handleMapClick}
           />
         ) : (
           <>
             <MapView
               selectedId={selectedId}
-              boxFormat={settings.boxFormat}
-              boxSize={settings.boxSize}
-              baseLayer={settings.baseLayer}
+              boxFormat={mapSettings.boxFormat}
+              boxSize={mapSettings.boxSize}
+              baseLayer={mapSettings.baseLayer}
               riverFlow={effectiveRiverFlow}
               hoveredLevel={hoveredLevel}
               hiddenLevels={hiddenLevels}
@@ -198,8 +213,8 @@ export default function App() {
             />
 
             <BaseLayerSwitcher
-              value={settings.baseLayer}
-              onChange={(id) => setSetting("baseLayer", id)}
+              value={mapSettings.baseLayer}
+              onChange={(id) => setMapSetting("baseLayer", id)}
             />
             <AgencyLogo />
           </>
@@ -209,26 +224,38 @@ export default function App() {
           hidden={hiddenLevels}
           onHover={setHoveredLevel}
           onToggle={toggleLevel}
-          showBarrageItem={settings.view === "flow"}
+          showBarrageItem={view === "flow"}
         />
 
         <MapControls
           onOpenSettings={() => setSettingsOpen(true)}
-          onRecenter={settings.view === "map" ? () => setRecenterTick((t) => t + 1) : undefined}
-          onResetPositions={settings.view === "map" ? resetStationPositions : undefined}
-          hasCustomPositions={Object.keys(stationOverrides).length > 0}
+          onRecenter={view === "map" ? () => setRecenterTick((t) => t + 1) : undefined}
+          onResetPositions={view === "map" ? resetStationPositions : resetFlowStationPositions}
+          hasCustomPositions={
+            view === "map"
+              ? Object.keys(stationOverrides).length > 0
+              : Object.keys(flowStationOverrides).length > 0
+          }
           onCapture={handleCapture}
           capturing={capturing}
         />
         <SettingsSidebar
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
-          format={settings.boxFormat}
-          onFormatChange={(f) => setSetting("boxFormat", f)}
-          size={settings.boxSize}
-          onSizeChange={(s) => setSetting("boxSize", s)}
-          riverFlow={settings.riverFlowAnimation}
-          onRiverFlowChange={(v) => setSetting("riverFlowAnimation", v)}
+          format={activeSettings.boxFormat}
+          onFormatChange={(f) =>
+            view === "map" ? setMapSetting("boxFormat", f) : setFlowSetting("boxFormat", f)
+          }
+          size={activeSettings.boxSize}
+          onSizeChange={(s) =>
+            view === "map" ? setMapSetting("boxSize", s) : setFlowSetting("boxSize", s)
+          }
+          riverFlow={activeSettings.riverFlowAnimation}
+          onRiverFlowChange={(v) =>
+            view === "map"
+              ? setMapSetting("riverFlowAnimation", v)
+              : setFlowSetting("riverFlowAnimation", v)
+          }
         />
         <StationSidebar
           stationId={selectedId}
