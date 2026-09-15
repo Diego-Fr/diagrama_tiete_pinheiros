@@ -211,6 +211,7 @@ export default function App() {
 
         {view === "flow" ? (
           <FlowView
+            region={region}
             stations={activeStations}
             stationIds={activeStationIds}
             flowDiagram={activeFlowDiagram}
@@ -297,6 +298,7 @@ export default function App() {
           }
         />
         <StationSidebar
+          region={region}
           stations={activeStations}
           stationIds={activeStationIds}
           stationId={selectedId}

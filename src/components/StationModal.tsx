@@ -4,6 +4,7 @@ import { stationsById } from "@/data/stations";
 import type { StationPoint } from "@/types/station";
 import { useStationHistory } from "@/hooks/useStationHistory";
 import { useStationStatus } from "@/hooks/useStationStatus";
+import { buildJusanteChartSeries, formatFlow } from "@/lib/stationFormat";
 import DateRangeControl from "@/components/DateRangeControl";
 import LevelChart from "@/components/LevelChart";
 import ReadingsTable from "@/components/ReadingsTable";
@@ -54,6 +55,16 @@ export default function StationModal({
     range.end.toISOString(),
     range.groupType,
   );
+  // Série de JUSANTE (2026-09-15) — MESMA janela/agrupamento do posto
+  // principal (`range`), busca própria (o modal usa `useStationHistory`,
+  // não o `useMeasurements` de 6h fixo da sidebar/mapa). `enabled` interno
+  // do hook (`stationId != null`) já lida com UHE sem jusante mapeada.
+  const jusanteHistory = useStationHistory(
+    station?.jusanteStationId ?? null,
+    range.start.toISOString(),
+    range.end.toISOString(),
+    range.groupType,
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -67,6 +78,12 @@ export default function StationModal({
 
   const series = history.data?.get(stationId) ?? null;
   const thresholds = byId.get(stationId)?.thresholds ?? {};
+  const jusanteSeries =
+    station.jusanteStationId != null
+      ? (jusanteHistory.data?.get(station.jusanteStationId) ?? null)
+      : null;
+  const jusanteChart = buildJusanteChartSeries(jusanteSeries);
+  const jusanteFlow = jusanteSeries?.last.flow ?? null;
   const loading = history.isLoading || history.isFetching;
   // Prefixo da API (correto) quando disponível; só cai pro estático
   // (`station.prefix`, que tem registros corrompidos — ver `stations.ts`)
@@ -109,7 +126,12 @@ export default function StationModal({
         </header>
 
         <div className="station-modal__toolbar">
-          <span className="station-modal__toolbar-label">Nível</span>
+          <span className="station-modal__toolbar-label">
+            Nível
+            {/* Vazão de jusante (2026-09-15) — regra restrita a jusante de
+                reservatório, só quando a API preenche `read_value`. */}
+            {jusanteFlow != null && ` · Vazão: ${formatFlow(jusanteFlow)} m³/s`}
+          </span>
           <ViewModeToggle mode={viewMode} onChange={setViewMode} />
         </div>
 
@@ -121,6 +143,7 @@ export default function StationModal({
               <LevelChart
                 readings={series.readings}
                 thresholds={thresholds}
+                jusante={jusanteChart}
                 wide
               />
             ) : (

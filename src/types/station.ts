@@ -15,6 +15,25 @@ export interface RawStation {
   transmission_gap: number;
   /** Intervalo esperado de medição, em minutos. */
   measurement_gap: number;
+  /** Subtipo específico de diagrama — hoje só usado pelas UHEs do Rio
+   * Juquiá-Guaçu (2026-09-15, Ribeira de Iguape): `"reservatorio"` marca
+   * um posto que monitora o NÍVEL DO RESERVATÓRIO de uma barragem (não o
+   * curso normal de um rio) — muda como a caixa é desenhada no diagrama
+   * (`ReservoirStationNode.tsx`, 3 linhas empilhadas montante/
+   * reservatório/jusante, só o meio com dado real por ora). Ausente/
+   * `undefined` = posto comum (a grande maioria). */
+  station_subtype?: "reservatorio";
+  /** Id do posto que mede o nível de JUSANTE dessa UHE (2026-09-15,
+   * Ribeira de Iguape) — só existe nos 5 dos 8 registros
+   * `station_subtype: "reservatorio"` que têm jusante monitorada (as
+   * outras 3 UHEs não têm posto de jusante ainda). Vem de
+   * `data/station_aux.raw.txt` (id/prefix/nome de postos auxiliares que
+   * não entram no mapa/diagrama como posto próprio — só servem pra
+   * telemetria extra de outro posto), relacionado por NOME (ex.:
+   * "Juquitiba (UHE França Jusante)" → jusante de "Juquitiba (UHE França
+   * Barramento)"). Usado por `ReservoirStationNode`/`FlowView` pra buscar
+   * o dado extra e mostrar na 4ª linha da caixa. */
+  jusante_prefix_id?: number;
   [key: string]: unknown;
 }
 
@@ -47,5 +66,10 @@ export interface StationPoint {
   measurementGap: number;
   /** Bacia/área de interesse a que esse posto pertence. */
   region: Region;
+  /** Ver `RawStation.station_subtype` — copiado pra cá só pra não ter que
+   * cavar `.raw` toda vez que um componente precisa checar isso. */
+  subtype?: "reservatorio";
+  /** Ver `RawStation.jusante_prefix_id` — copiado pra cá pelo mesmo motivo. */
+  jusanteStationId?: number;
   raw: RawStation;
 }

@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { stationsById } from "@/data/stations";
-import type { StationPoint } from "@/types/station";
+import { REGION_JUSANTE_IDS, stationsById } from "@/data/stations";
+import type { Region, StationPoint } from "@/types/station";
+import { useMeasurements } from "@/hooks/useMeasurements";
 import { useStationStatus } from "@/hooks/useStationStatus";
 import { LEVEL_LABELS } from "@/lib/classification";
 import { formatDateTimeBR, formatFullDateTimeBR } from "@/lib/datetime";
 import { FRESHNESS_LABELS } from "@/lib/freshness";
+import { buildJusanteChartSeries, formatFlow } from "@/lib/stationFormat";
 import type { Trend } from "@/lib/trendIcons";
 import LevelChart from "@/components/LevelChart";
 import ReadingsTable from "@/components/ReadingsTable";
@@ -22,6 +24,9 @@ interface StationSidebarProps {
    * efeito OPOSTO: criava uma queryKey diferente da já usada pelo
    * mapa/diagrama, então toda abertura de sidebar disparava uma request
    * nova pra medições E parâmetros, mesmo já tendo os dados). */
+  /** Bacia ativa — só usada pra buscar `REGION_JUSANTE_IDS[region]` (série
+   * de jusante das UHEs de reservatório, 2026-09-15). */
+  region: Region;
   stations: StationPoint[];
   stationIds: number[];
   stationId: number | null;
@@ -43,6 +48,7 @@ function trendOf(prev: number | undefined, last: number): Trend {
  * (sem nova requisição). Fecha no botão ou ao clicar no mapa.
  */
 export default function StationSidebar({
+  region,
   stations,
   stationIds,
   stationId,
@@ -54,6 +60,11 @@ export default function StationSidebar({
   // que MapView/FlowView usam) — reaproveita o cache já buscado, não
   // dispara request nova (ver comentário na prop, acima).
   const { byId } = useStationStatus(stations, stationIds, referenceDate);
+  // Série de JUSANTE (2026-09-15) — mesmo `REGION_JUSANTE_IDS[region]`
+  // (referência estável) que `FlowView` já usa; se o diagrama já buscou
+  // isso (mesma janela/`referenceDate`), bate a MESMA queryKey do React
+  // Query e não dispara request nova.
+  const { data: jusanteData } = useMeasurements(REGION_JUSANTE_IDS[region], referenceDate);
   const [viewMode, setViewMode] = useState<ViewMode>("chart");
 
   if (stationId == null) return null;
@@ -66,6 +77,15 @@ export default function StationSidebar({
   const classification = status?.classification ?? "normal";
   const last = series?.last ?? null;
   const freshness = status?.freshness ?? null;
+  const jusanteSeries =
+    station.jusanteStationId != null
+      ? (jusanteData?.get(station.jusanteStationId) ?? null)
+      : null;
+  const jusanteChart = buildJusanteChartSeries(jusanteSeries);
+  // Vazão (2026-09-15, regra restrita à jusante de reservatório) — só
+  // quando a ÚLTIMA leitura da jusante tem `read_value` preenchido pela
+  // API (`Reading.flow`).
+  const jusanteFlow = jusanteSeries?.last.flow ?? null;
   // Prefixo da API (correto) quando disponível; só cai pro estático
   // (`station.prefix`, que tem registros corrompidos — ver `stations.ts`)
   // se a janela consultada não trouxe nenhuma leitura ainda.
@@ -131,6 +151,12 @@ export default function StationSidebar({
           )}
         </p>
       )}
+      {/* Vazão de jusante (2026-09-15) — só quando a API preenche
+          `read_value` pra essa jusante (regra restrita a jusante de
+          reservatório, pedido do usuário). */}
+      {jusanteFlow != null && (
+        <p className="station-sidebar__time">Vazão: {formatFlow(jusanteFlow)} m³/s</p>
+      )}
 
       <div className="station-sidebar__chart-head">
         <h3 className="station-sidebar__chart-title">{chartTitle}</h3>
@@ -142,6 +168,7 @@ export default function StationSidebar({
             <LevelChart
               readings={series.readings}
               thresholds={status?.thresholds ?? {}}
+              jusante={jusanteChart}
             />
           ) : (
             <ReadingsTable readings={series.readings} />

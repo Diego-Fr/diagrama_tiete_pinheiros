@@ -71,6 +71,8 @@ function toStationPoints(raw: RawStation[], region: Region): StationPoint[] {
       kind: toKind(r.station_type_id),
       measurementGap: toMeasurementGap(r),
       region,
+      subtype: r.station_subtype,
+      jusanteStationId: r.jusante_prefix_id,
       raw: r,
     }));
 }
@@ -98,4 +100,22 @@ export const REGION_STATIONS: Record<Region, StationPoint[]> = {
 export const REGION_STATION_IDS: Record<Region, number[]> = {
   tiete: REGION_STATIONS.tiete.map((s) => s.id),
   ribeira: REGION_STATIONS.ribeira.map((s) => s.id),
+};
+
+/** Ids dos postos de JUSANTE das UHEs (2026-09-15, Ribeira de Iguape) —
+ * `StationPoint.jusanteStationId` de quem tem (5 dos 8 `"reservatorio"`,
+ * as outras 3 UHEs não têm jusante monitorada ainda). Esses ids NÃO são
+ * postos próprios (não estão em `REGION_STATIONS`, não aparecem sozinhos
+ * no mapa/diagrama) — só entram numa busca extra de medições
+ * (`useMeasurements`) pra alimentar a 4ª linha da caixa de reservatório
+ * (`ReservoirStationNode`). Referência estável (computada 1x no load do
+ * módulo) — igual `REGION_STATION_IDS`, precisa ser assim pra não recriar
+ * a queryKey do React Query a cada render (ver nota extensa em
+ * `useMeasurements`/achado de bug de cache desse mesmo motivo). Vazio no
+ * Tietê (não tem esse conceito). */
+export const REGION_JUSANTE_IDS: Record<Region, number[]> = {
+  tiete: [],
+  ribeira: REGION_STATIONS.ribeira
+    .map((s) => s.jusanteStationId)
+    .filter((id): id is number => id != null),
 };

@@ -56,13 +56,33 @@
  * **Juquiá (4F-018) na ponta de montante do Rio Juquiá-Guaçu**
  * (2026-09-15, pedido do usuário) — o Rio Juquiá-Guaçu deixou de ser só
  * informativo, ganhou seu 1º posto real: flutua do lado LESTE de
- * `j-juquiaguacu-1` (topo da linha, y=234), lado oposto ao rótulo do rio.
+ * `j-juquiaguacu-1`, lado oposto ao rótulo do rio.
  *
-
+ * **Rio Juquiá dobrado + novo Rio Juquiá-Guaçu + 6 barragens**
+ * (2026-09-15, mesmo dia, pedido do usuário) — reorganização: o que era
+ * "Rio Juquiá-Guaçu" (linha vertical única, trunco↔y=234) virou **"Rio
+ * Juquiá"**, DOBRADO de tamanho pra cima (agora vai até y=68 — o antigo
+ * topo, y=234, onde o posto Juquiá já estava, ficou exatamente no MEIO
+ * do novo comprimento, por construção: dobrar mantendo a base fixa
+ * sempre deixa o ponto médio antigo no meio do novo). Um cano NOVO,
+ * **"Rio Juquiá-Guaçu"**, gruda no topo do Juquiá (y=68) e vai pra OESTE
+ * até x=114 — "alinhar com o Rio Ribeira de Iguape" foi interpretado
+ * como alinhar com o início do próprio tronco (o ponto mais a montante
+ * de "RIO RIBEIRA DE IGUAPE", onde fica o posto 5F-005) — **é uma
+ * suposição, ajustar se não for o que o usuário quis dizer**. **6
+ * barragens** (ícone novo, `RiverBarrageNode.tsx` — sem dado real
+ * ainda, "depois eu coloco a lista de postos" segundo o usuário)
+ * distribuídas com espaçamento igual ao longo do Rio JUQUIÁ-GUAÇU (não
+ * o Juquiá — corrigido depois de um 1º engano, usuário apontou),
+ * dividindo o comprimento em 7 partes iguais e pondo uma barragem em
+ * cada um dos 6 pontos internos (exclui as duas pontas).
+ *
  * Sem barragem monitorada conhecida nessa bacia — `FLOW_BARRAGE_POSITIONS`
  * fica vazio (o traço grosso perto do Rio Capivari na imagem é só a
  * pontinha/tampa decorativa do desenho original, sem API de comportas
- * como as barragens do Tietê — tratado como fim de linha comum).
+ * como as barragens do Tietê — tratado como fim de linha comum). As 6
+ * barragens do Juquiá usam `FLOW_SIMPLE_BARRAGES` (marcador visual, sem
+ * API — ver `flowShared.ts`), não esse `FLOW_BARRAGE_POSITIONS`.
  *
  * **Sentido da vazão animada** (`PipeEdge.tsx`/`flow-pipe-move`,
  * `animation-direction: reverse`) — regra confirmada (2026-09-15):
@@ -109,6 +129,14 @@ import type {
 const TRUNK_Y = 400;
 /** Mesmo valor do Tietê — quanto a caixa flutua acima/abaixo do cano. */
 const OFF = 90;
+
+/** Posição de cada uma das 6 UHEs do Rio Juquiá-Guaçu (espaçamento igual,
+ * comprimento 726 dividido em 7 partes) — usado tanto pelos ícones
+ * (`FLOW_SIMPLE_BARRAGES`) quanto pelos postos que ficam no meio de cada
+ * um (`FLOW_STATION_POSITIONS`), por isso fica aqui em cima (usado nos
+ * dois lugares, declarado antes de qualquer um dos dois). */
+const JGUACU_BARRAGE_STEP = (840 - 114) / 7;
+const jguacuBarrageX = (i: number) => 840 - JGUACU_BARRAGE_STEP * i;
 
 // ---- Tronco: 7 pontos (waypoints medidos na imagem + o ponto novo entre
 //      Taquari/Etá pro Eldorado, ver cabeçalho). x = pixel_da_imagem - 92
@@ -160,6 +188,34 @@ export const FLOW_STATION_POSITIONS: FlowStationPosition[] = [
   // (2026-09-15). Flutua pro lado LESTE (o rótulo "RIO JUQUIÁ-GUAÇU" já
   // fica do lado oeste da linha).
   { stationId: 29728, x: 840 + OFF, y: 234 },
+
+  // ---- 8 postos de monitoramento das UHEs (2026-09-15, pedido do
+  //      usuário: "posicione cada caixa no meio de cada SVG de barragem
+  //      correspondente") — DIFERENTE de todos os outros postos desse
+  //      arquivo: aqui a caixa NÃO flutua ao lado, ela fica exatamente
+  //      em cima do ícone da UHE (mesmo x/y de `FLOW_SIMPLE_BARRAGES`).
+  //      MESMO assim têm entrada em `FLOW_LEADERS` (pedido do usuário:
+  //      "coloca a linha linkando") — com início/fim coincidindo (posto
+  //      e junção no mesmo ponto) a "bolinha" do leader fica embaixo da
+  //      caixa (SVG de edge sempre atrás dos nodes no React Flow), então
+  //      NÃO aparece na tela — o ganho real é deixar o posto formalmente
+  //      ligado ao cano no grafo (as 6 UHEs do meio viraram junções de
+  //      verdade, não só coordenadas soltas — ver `FLOW_JUNCTIONS`/
+  //      `FLOW_PIPES`). O ícone da barragem foi aumentado (48→90px,
+  //      `FlowView.tsx`) pra "parede"/água aparecerem ao redor da caixa
+  //      estreita — se "a linha linkando" pedida era outra coisa (não
+  //      esse elo formal no grafo), falta confirmar com o usuário. Nomes
+  //      cruzados com
+  //      `stations_ribeira.raw.json` pelo nome da UHE no próprio nome
+  //      do posto. ----
+  { stationId: 9508, x: jguacuBarrageX(1), y: 68 }, // Juquiá (PCH Serraria Barramento)
+  { stationId: 14437, x: jguacuBarrageX(2), y: 68 }, // Tapiraí (UHE Alecrim Barramento)
+  { stationId: 14473, x: jguacuBarrageX(3), y: 68 }, // Tapiraí (PCH Porto Raso Barramento)
+  { stationId: 14480, x: jguacuBarrageX(4), y: 68 }, // Tapiraí (UHE Barra Barramento)
+  { stationId: 14815, x: jguacuBarrageX(5), y: 68 }, // Ibiúna (UHE Fumaça Barramento)
+  { stationId: 14504, x: jguacuBarrageX(6), y: 68 }, // Juquitiba (UHE França Barramento)
+  { stationId: 14508, x: 477, y: 68 - 166 }, // Piedade (UHE Jurupara Barramento)
+  { stationId: 9545, x: 790, y: 68 - 166 }, // Juquiá (UHE Salto do Iporanga Barramento)
 ];
 
 export const FLOW_POSITION_BY_STATION_ID = new Map(
@@ -184,9 +240,42 @@ export const FLOW_JUNCTIONS: FlowJunction[] = [
   { id: "j-eta-0", x: 660, y: TRUNK_Y },
   { id: "j-eta-1", x: 660, y: 234 },
 
-  // Rio Juquiá-Guaçu — vertical simples, sobe do tronco.
+  // Rio Juquiá — vertical, sobe do tronco. Dobrado de tamanho (2026-09-15):
+  // j-juquiaguacu-1 (y=234) era o topo original, virou o MEIO (é onde o
+  // posto Juquiá já estava e continua); j-juquiaguacu-2 (y=68) é o novo
+  // topo. Rio Juquiá-Guaçu (novo) gruda em j-juquiaguacu-2 e vai pra oeste.
   { id: "j-juquiaguacu-0", x: 840, y: TRUNK_Y },
   { id: "j-juquiaguacu-1", x: 840, y: 234 },
+  { id: "j-juquiaguacu-2", x: 840, y: 68 },
+  { id: "j-jguacu-0", x: 114, y: 68 }, // Rio Juquiá-Guaçu, ponta oeste (alinhado com o início do tronco)
+  // As 6 UHEs — viraram JUNÇÕES DE VERDADE no cano (não só coordenadas
+  // soltas que coincidiam visualmente com a linha reta) — pedido do
+  // usuário (2026-09-15: "coloca a linha linkando, eu vi que não
+  // colocou") pra cada posto ter uma "linha" (leader, ver
+  // `FLOW_LEADERS`) ligando de verdade ao cano, igual todo outro posto
+  // do diagrama. Partem o antigo segmento único `p-jguacu-0` em 7.
+  { id: "j-uhe-1", x: jguacuBarrageX(1), y: 68 }, // Serraria
+  { id: "j-uhe-2", x: jguacuBarrageX(2), y: 68 }, // Alecrim
+  { id: "j-uhe-3", x: jguacuBarrageX(3), y: 68 }, // Porto Raso
+  { id: "j-uhe-4", x: jguacuBarrageX(4), y: 68 }, // Barra
+  { id: "j-uhe-5", x: jguacuBarrageX(5), y: 68 }, // Fumaça
+  { id: "j-uhe-6", x: jguacuBarrageX(6), y: 68 }, // França
+
+  // ---- Rio do Peixe e Rio Açungui (2026-09-15, pedido do usuário) — 2
+  //      afluentes novos do Juquiá-Guaçu, subindo pra NORTE, do mesmo
+  //      tamanho do Rio Etá (166px). Cada um termina numa UHE (barragem
+  //      real, com posto de monitoramento — ver `FLOW_SIMPLE_BARRAGES`/
+  //      `FLOW_STATION_POSITIONS`).
+  //      R. do Peixe (UHE Jurupará na ponta) — gruda entre a UHE Porto
+  //      Raso (x=528.86) e a UHE Barra (x=425.14), no meio dos dois.
+  { id: "j-rpeixe-0", x: 477, y: 68 },
+  { id: "j-rpeixe-1", x: 477, y: 68 - 166 },
+  //      R. Açungui (UHE Salto do Iporanga na ponta) — "antes da UHE
+  //      Serraria, antes de todas" = mais a jusante que a Serraria
+  //      (x=736.29), entre ela e onde o Juquiá-Guaçu gruda no Juquiá
+  //      (x=840).
+  { id: "j-acungui-0", x: 790, y: 68 },
+  { id: "j-acungui-1", x: 790, y: 68 - 166 },
 
   // ---- Cluster Pardo/Turvo/Capivari (entre Iporanga=114 e Eldorado=344)
   //      — 3 níveis aninhados, exatamente como a imagem: Pardo desce
@@ -254,7 +343,27 @@ export const FLOW_PIPES: FlowPipe[] = [
 
   { id: "p-taquari-0", from: "j-taquari-0", to: "j-taquari-1", river: "taquari" },
   { id: "p-eta-0", from: "j-eta-0", to: "j-eta-1", river: "eta" },
-  { id: "p-juquiaguacu-0", from: "j-juquiaguacu-0", to: "j-juquiaguacu-1", river: "juquiaguacu" },
+  // Rio Juquiá — 2 segmentos agora (dobrado, ver nota no topo do
+  // arquivo). `from` continua o mais a jusante em cada um (mesma regra
+  // do tronco — água "chega" no `from`, ver nota grande no topo).
+  { id: "p-juquiaguacu-0", from: "j-juquiaguacu-0", to: "j-juquiaguacu-1", river: "juquia" },
+  { id: "p-juquiaguacu-1", from: "j-juquiaguacu-1", to: "j-juquiaguacu-2", river: "juquia" },
+  // Rio Juquiá-Guaçu (novo) — gruda no topo do Juquiá e vai pra oeste.
+  // Rio Juquiá-Guaçu — 7 segmentos agora (era 1 só), passando pelas 6
+  // junções das UHEs (ver `FLOW_JUNCTIONS`). Mesma direção de antes
+  // (não invertida — "os demais afluentes ficaram como estavam").
+  { id: "p-jguacu-0", from: "j-juquiaguacu-2", to: "j-uhe-1", river: "juquiaguacu" },
+  { id: "p-jguacu-1", from: "j-uhe-1", to: "j-uhe-2", river: "juquiaguacu" },
+  { id: "p-jguacu-2", from: "j-uhe-2", to: "j-uhe-3", river: "juquiaguacu" },
+  { id: "p-jguacu-3", from: "j-uhe-3", to: "j-uhe-4", river: "juquiaguacu" },
+  { id: "p-jguacu-4", from: "j-uhe-4", to: "j-uhe-5", river: "juquiaguacu" },
+  { id: "p-jguacu-5", from: "j-uhe-5", to: "j-uhe-6", river: "juquiaguacu" },
+  { id: "p-jguacu-6", from: "j-uhe-6", to: "j-jguacu-0", river: "juquiaguacu" },
+  // Rio do Peixe e Rio Açungui — mesma convenção do Etá/Taquari (não
+  // invertidos, "os demais afluentes ficaram como estavam" — ver nota
+  // grande no topo do arquivo).
+  { id: "p-rpeixe-0", from: "j-rpeixe-0", to: "j-rpeixe-1", river: "rpeixe" },
+  { id: "p-acungui-0", from: "j-acungui-0", to: "j-acungui-1", river: "acungui" },
 
   { id: "p-pardo-0", from: "j-pardo-0", to: "j-pardo-1", river: "pardo" },
   { id: "p-pardo-1", from: "j-pardo-1", to: "j-pardo-dot", river: "pardo" },
@@ -297,6 +406,17 @@ export const FLOW_LEADERS: FlowPipe[] = [
   { id: "l-pardo-dot", from: "j-pardo-dot", to: 30854, river: "pardo" },
   // Juquiá (4F-018) — na ponta de montante do Rio Juquiá-Guaçu.
   { id: "l-juquiaguacu", from: "j-juquiaguacu-1", to: 29728, river: "juquiaguacu" },
+  // 8 UHEs (2026-09-15) — posto e junção coincidem no mesmo ponto (a
+  // caixa fica "no meio do SVG" da barragem), mas ainda ganham leader
+  // (pedido do usuário: "coloca a linha linkando").
+  { id: "l-uhe-1", from: "j-uhe-1", to: 9508, river: "juquiaguacu" }, // Serraria
+  { id: "l-uhe-2", from: "j-uhe-2", to: 14437, river: "juquiaguacu" }, // Alecrim
+  { id: "l-uhe-3", from: "j-uhe-3", to: 14473, river: "juquiaguacu" }, // Porto Raso
+  { id: "l-uhe-4", from: "j-uhe-4", to: 14480, river: "juquiaguacu" }, // Barra
+  { id: "l-uhe-5", from: "j-uhe-5", to: 14815, river: "juquiaguacu" }, // Fumaça
+  { id: "l-uhe-6", from: "j-uhe-6", to: 14504, river: "juquiaguacu" }, // França
+  { id: "l-uhe-rpeixe", from: "j-rpeixe-1", to: 14508, river: "rpeixe" }, // Jurupará
+  { id: "l-uhe-acungui", from: "j-acungui-1", to: 9545, river: "acungui" }, // Salto do Iporanga
 ];
 
 /** Mesmo offset do Tietê. */
@@ -306,12 +426,29 @@ export const FLOW_RIVER_LABELS: FlowRiverLabel[] = [
   // As 2 ocorrências de "RIO RIBEIRA DE IGUAPE" (medidas: a 1ª fica entre
   // Taquari e Etá, a 2ª entre a descida do Jacupiranga e o Rio
   // Pariquera-Açu — igual ao Tietê ter "RIO TIETÊ" 2x ao longo do tronco).
-  { id: "lbl-ribeira-0", text: "RIO RIBEIRA DE IGUAPE", x: 572, y: TRUNK_Y - LABEL_OFFSET, angle: 0 },
+  { id: "lbl-ribeira-0", text: "RIO RIBEIRA DE IGUAPE", x: 202, y: TRUNK_Y - LABEL_OFFSET, angle: 0 },
   { id: "lbl-ribeira-1", text: "RIO RIBEIRA DE IGUAPE", x: 1108, y: TRUNK_Y - LABEL_OFFSET, angle: 0 },
 
   { id: "lbl-taquari", text: "RIO TAQUARI", x: 460 - LABEL_OFFSET, y: 317, angle: -90 },
   { id: "lbl-eta", text: "RIO ETÁ", x: 660 - LABEL_OFFSET, y: 317, angle: -90 },
-  { id: "lbl-juquiaguacu", text: "RIO JUQUIÁ-GUAÇU", x: 840 - LABEL_OFFSET, y: 317, angle: -90 },
+  // Rio Juquiá (era "Juquiá-Guaçu") — posição inalterada (234, meio do
+  // trecho 68↔400 velho topo virou o meio, por construção — ver nota no
+  // topo do arquivo).
+  { id: "lbl-juquia", text: "RIO JUQUIÁ", x: 840 - LABEL_OFFSET, y: 350, angle: -90 },
+  // Rio Juquiá-Guaçu (novo, horizontal) — rótulo em cima do trecho. Não
+  // fica mais centralizado (x=477 colidia com o Rio do Peixe, que gruda
+  // bem ali — ver abaixo) — reposicionado pro vão entre a ponta oeste
+  // (114) e a UHE França (217.71), livre de qualquer cano/barragem. y
+  // bem mais acima que o padrão de 16px (LABEL_OFFSET) — as barragens
+  // (ícone real, 48×48, centralizado no cano em y=68 → ocupa até y=44)
+  // encostariam no rótulo se ele ficasse coladinho no cano como de
+  // costume (2026-09-15: subido pra abrir espaço, depois que o ícone
+  // virou a imagem de verdade, bem maior que a 1ª tentativa em SVG).
+  { id: "lbl-jguacu", text: "RIO JUQUIÁ-GUAÇU", x: 100, y: 50, angle: 0 },
+  // Rio do Peixe e Rio Açungui — mesma regra dos afluentes verticais
+  // (rótulo à esquerda, giro -90), altura no meio do trecho (68 a -98).
+  { id: "lbl-rpeixe", text: "RIO DO PEIXE", x: 477 - LABEL_OFFSET, y: -15, angle: -90 },
+  { id: "lbl-acungui", text: "RIO AÇUNGUI", x: 790 - LABEL_OFFSET, y: -15, angle: -90 },
 
   { id: "lbl-pardo", text: "RIO PARDO", x: 220 - LABEL_OFFSET, y: 593, angle: -90 },
   // Turvo/Capivari/Jacupiranga/Guaraú correm na HORIZONTAL na imagem
@@ -332,6 +469,32 @@ export const FLOW_RIVER_LABELS: FlowRiverLabel[] = [
 export const FLOW_BARRAGE_POSITIONS: FlowBarragePosition[] = [];
 export const FLOW_BARRAGE_POSITION_BY_ID = new Map<string, FlowBarragePosition>();
 
+/**
+ * 8 UHEs (usinas hidrelétricas) — 6 no Rio Juquiá-Guaçu (espaçamento
+ * igual, comprimento 726 dividido em 7 partes iguais, ver conta abaixo)
+ * + 2 na ponta dos afluentes novos (Rio do Peixe/Rio Açungui). Nomes
+ * reais confirmados pelo usuário (2026-09-15, cruzados com
+ * `stations_ribeira.raw.json` pelo nome do posto de monitoramento —
+ * ver `FLOW_STATION_POSITIONS`, cada posto fica exatamente NO MEIO do
+ * ícone da UHE correspondente, não flutuando ao lado como os demais).
+ * "Da direita pra esquerda" (jusante→montante, mesma convenção de `x`
+ * crescente=oeste→leste): Serraria, Alecrim, Porto Raso, Barra, Fumaça,
+ * França. (`jguacuBarrageX`/`JGUACU_BARRAGE_STEP` declarados lá em cima,
+ * perto do `OFF` — precisam existir antes de `FLOW_STATION_POSITIONS`
+ * também usar.)
+ */
+export const FLOW_SIMPLE_BARRAGES = [
+  { id: "uhe-serraria", name: "UHE Serraria", x: jguacuBarrageX(1), y: 68 },
+  { id: "uhe-alecrim", name: "UHE Alecrim", x: jguacuBarrageX(2), y: 68 },
+  { id: "uhe-portoraso", name: "UHE Porto Raso", x: jguacuBarrageX(3), y: 68 },
+  { id: "uhe-barra", name: "UHE Barra", x: jguacuBarrageX(4), y: 68 },
+  { id: "uhe-fumaca", name: "UHE Fumaça", x: jguacuBarrageX(5), y: 68 },
+  { id: "uhe-franca", name: "UHE França", x: jguacuBarrageX(6), y: 68 },
+  // Nas pontas do Rio do Peixe/Rio Açungui (ver `FLOW_JUNCTIONS`).
+  { id: "uhe-jurupara", name: "UHE Jurupará", x: 477, y: 68 - 166 },
+  { id: "uhe-saltoiporanga", name: "UHE Salto do Iporanga", x: 790, y: 68 - 166 },
+];
+
 /** Mesmo tratamento do Tietê: logos centralizados embaixo do tronco. `x` =
  * meio do tronco medido ((114+1401)/2 ≈ 758); `y` abaixo de onde os
  * afluentes mais fundos terminam (Guaraú vai até y=830 — ~150px de
@@ -348,6 +511,7 @@ export const RIBEIRA_FLOW_DIAGRAM: FlowDiagramConfig = {
   FLOW_RIVER_LABELS,
   FLOW_BARRAGE_POSITIONS,
   FLOW_BARRAGE_POSITION_BY_ID,
+  FLOW_SIMPLE_BARRAGES,
   FLOW_LOGO_POSITION,
   FLOW_SIBH_LOGO_POSITION,
 };

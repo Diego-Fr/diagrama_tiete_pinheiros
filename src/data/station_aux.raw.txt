@@ -1,0 +1,5 @@
+14546	81491100	Juquitiba (UHE França Jusante)
+14868	81496200	Tapiraí (UHE Barra Jusante)
+9570	81499085	Juquiá (PCH Serraria Jusante)
+14461	81499200	Piedade (UHE Jurupará Jusante)
+9490	81501000	Juquiá (UHE Salto do Iporanga Jusante)

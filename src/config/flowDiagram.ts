@@ -322,6 +322,7 @@ export const TIETE_FLOW_DIAGRAM: FlowDiagramConfig = {
   FLOW_RIVER_LABELS,
   FLOW_BARRAGE_POSITIONS,
   FLOW_BARRAGE_POSITION_BY_ID,
+  FLOW_SIMPLE_BARRAGES: [], // sem barragem "só ícone" no Tietê — todas as suas já têm dado real
   FLOW_LOGO_POSITION,
   FLOW_SIBH_LOGO_POSITION,
 };

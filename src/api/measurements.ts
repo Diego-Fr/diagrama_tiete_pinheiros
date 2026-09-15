@@ -24,6 +24,15 @@ export type GroupType = "minute" | "hour" | "day" | "month";
 
 export interface Reading {
   value: number;
+  /** Vazão (m³/s), de `RawMeasurement.read_value` — a API só preenche pra
+   * alguns fluviômetros. Vem populado aqui pra QUALQUER estação que tenha
+   * (é só um espelho do dado cru), mas hoje só é EXIBIDO/consumido nas
+   * estações de JUSANTE de reservatório (2026-09-15, pedido explícito do
+   * usuário: "essa regra do read_value apenas para as jusantes de
+   * reservatório") — ver `ReservoirStationNode`/`StationSidebar`/
+   * `StationModal`, os únicos lugares que leem este campo. `null` = API
+   * não mandou/não tem essa leitura pra essa estação. */
+  flow: number | null;
   /** String original da API ("YYYY/MM/DD HH:mm"). */
   date: string;
   /** `date` parseado, para comparação/ordenação. */
@@ -128,7 +137,12 @@ export async function fetchSeriesInRange(
 
     if (m.value == null) continue;
     const list = readingsByStation.get(id) ?? [];
-    list.push({ value: m.value, date: m.date, at: parseApiUtcDate(m.date) });
+    list.push({
+      value: m.value,
+      flow: typeof m.read_value === "number" ? m.read_value : null,
+      date: m.date,
+      at: parseApiUtcDate(m.date),
+    });
     readingsByStation.set(id, list);
   }
 

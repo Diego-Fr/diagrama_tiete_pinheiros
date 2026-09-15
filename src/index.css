@@ -1886,6 +1886,133 @@ body {
   filter: brightness(0);
 }
 
+/* Ícone de barragem genérico (2026-09-15) — fica sobre o próprio cano
+   (z-index natural do React Flow já resolve, node sempre acima de edge),
+   sombra leve pra separar visualmente do traço azul do cano embaixo. */
+.flow-river-barrage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.35));
+}
+
+/* ---------------------------------------------------------------------------
+   Caixa de posto de RESERVATÓRIO (`ReservoirStationNode.tsx`, 2026-09-15) —
+   4 linhas empilhadas (rótulo "cota" / valor cota / rótulo "jusante" /
+   valor jusante), estreita e alta, ao invés da caixa normal (1-2 linhas
+   largas). Mesma paleta de classificação da caixa normal
+   (`.station-box-wrapper--*`), replicada aqui porque as classes têm nome
+   próprio (`.reservoir-box-wrapper--*`) — o seletor
+   `.station-box-wrapper--x .station-box` não bateria com `.reservoir-box`.
+   --------------------------------------------------------------------------- */
+.reservoir-box-wrapper {
+  background: transparent;
+  border: none;
+  transition: opacity 140ms ease;
+}
+
+.reservoir-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: calc(62px * var(--box-scale, 1));
+  font-size: calc(11px * var(--box-scale, 1));
+  line-height: 1.2;
+  background: #fff;
+  border: 1px solid #9aa5b1;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  transition:
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+.reservoir-box:active {
+  cursor: grabbing;
+}
+
+/* Rótulos "cota"/"jusante" (2026-09-15) — bem pequenos, só pra separar
+   visualmente os 2 pares (label+valor); fundo E texto tingidos (pedido
+   explícito), independente da classificação da caixa (attention/alert/…
+   só muda fundo/borda do `.reservoir-box` em si, não dos rótulos). */
+.reservoir-box__label {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: calc(5px * var(--box-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  padding: 0 calc(3px * var(--box-scale, 1));
+}
+.reservoir-box__label--cota {
+  background: transparent;
+  color: #1e40af;
+}
+.reservoir-box__label--jusante {
+  background: transparent;
+  color: #b91c1c;
+  border-top: 1px solid #fff;
+}
+
+.reservoir-box__row {
+  text-align: center;
+  font-weight: 700;
+  color: #1f2933;
+  font-variant-numeric: tabular-nums;
+  padding: calc(3px * var(--box-scale, 1)) calc(3px * var(--box-scale, 1));
+}
+/* Linha 2 (cota) — mesmo estilo do número da caixa default
+   (`.station-box__main`/`.station-box__value`), só que 2pt menor (9px em
+   vez de 11 — "tava grandinho", pedido do usuário) já que agora tem os
+   rótulos fazendo a separação, não precisa ser tão grande. */
+.reservoir-box__row--cota {
+  font-size: calc(9px * var(--box-scale, 1));
+}
+/* Linha 4 (jusante) — mesmo tamanho da cota, mas peso/cor um pouco mais
+   discretos (é o dado secundário da caixa). "–" quando essa UHE não tem
+   jusante monitorada (`jusanteSeries: null`). */
+.reservoir-box__row--jusante {
+  font-size: calc(9px * var(--box-scale, 1));
+  font-weight: 600;
+  color: #475569;
+}
+
+.reservoir-box-wrapper:hover .reservoir-box {
+  transform: scale(1.08);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+
+.reservoir-box-wrapper--attention .reservoir-box {
+  background: #fef9c3;
+  border-color: #ca8a04;
+  border-width: 2px;
+}
+.reservoir-box-wrapper--alert .reservoir-box {
+  background: #ffedd5;
+  border-color: #ea580c;
+  border-width: 2px;
+}
+.reservoir-box-wrapper--emergency .reservoir-box {
+  background: #f3e8ff;
+  border-color: #9333ea;
+  border-width: 2px;
+}
+.reservoir-box-wrapper--extravasation .reservoir-box {
+  background: #fee2e2;
+  border-color: #dc2626;
+  border-width: 2px;
+}
+.reservoir-box-wrapper--selected .reservoir-box {
+  box-shadow: 0px 0px 3px 2px rgb(0, 174, 255);
+  border: none;
+}
+
+
 /* faixa clara "correndo" sobre o cano — todo cano do fluxo foi montado no
    sentido jusante→montante (ver flowDiagram.ts), o oposto do fluxo real da
    água, por isso a animação já sai sempre invertida (`reverse`). */
@@ -2198,6 +2325,12 @@ body {
 .readings-table__value {
   font-weight: 700;
   text-align: right;
+}
+/* Coluna "Vazão (m³/s)" (2026-09-15) — mesma ideia da coluna de valor,
+   só sem negrito (dado secundário quando presente). */
+.readings-table__flow {
+  text-align: right;
+  color: #475569;
 }
 .readings-table__trend {
   text-align: center;

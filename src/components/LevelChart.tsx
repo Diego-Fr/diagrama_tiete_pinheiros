@@ -3,6 +3,7 @@ import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   Filler,
+  Legend,
   LineElement,
   LinearScale,
   PointElement,
@@ -16,13 +17,19 @@ import zoomPlugin from "chartjs-plugin-zoom";
 import type { Reading } from "@/api/measurements";
 import type { ReferenceThresholds } from "@/api/parameters";
 import { formatDateTimeBR, formatTimeBR } from "@/lib/datetime";
+import type { JusanteChartSeries } from "@/lib/stationFormat";
 
+// `Legend` registrado (2026-09-15) — só passa a aparecer quando há 2 séries
+// (`secondary`, ver `plugins.legend.display` abaixo); sem registrar
+// aqui, `legend:{display:true}` nas options não tem efeito nenhum (Chart.js
+// v4 exige o componente registrado, igual `Tooltip`/`Filler`).
 ChartJS.register(
   LineElement,
   PointElement,
   LinearScale,
   Filler,
   Tooltip,
+  Legend,
   annotationPlugin,
   zoomPlugin,
 );
@@ -45,18 +52,38 @@ const fmtDateTime = (ms: number) => formatDateTimeBR(new Date(ms));
 interface LevelChartProps {
   readings: Reading[];
   thresholds: ReferenceThresholds;
+  /** Série de JUSANTE da mesma UHE (2026-09-15), quando existe — desenhada
+   * como 2ª linha num eixo Y PRÓPRIO à direita (`yJusante`), sem
+   * compartilhar escala com a cota (pedido explícito do usuário: "coloca
+   * essa serie em eixo oposto, nao compartilhe eixos" — as duas grandezas
+   * não têm por que estar na mesma faixa de valores). Ausente/vazia = como
+   * antes (1 linha só, sem legenda). */
+  jusante?: JusanteChartSeries;
   /** true no modal → eixo X com data + hora e mais ticks. */
   wide?: boolean;
 }
 
+/** Mesma paleta usada na caixa de reservatório do diagrama (`.reservoir-box__label--*`
+ * em `index.css`) — cota = azul, jusante = vermelho — pra quem já viu a
+ * caixa reconhecer a mesma associação de cor no gráfico. */
+const COTA_COLOR = "#0369a1";
+const JUSANTE_COLOR = "#dc2626";
+
 /**
- * Linha do nível (m) ao longo do tempo (Chart.js). Uma série só → sem legenda.
- * O domínio Y é esticado para incluir TODOS os limiares definidos, mesmo
- * distantes da linha (contexto), desenhados como anotações tracejadas.
+ * Linha do nível (m) ao longo do tempo (Chart.js). Uma série só → sem legenda
+ * (o título já diz o que é). Com `jusante`, uma 2ª linha entra num eixo Y
+ * próprio à direita (`yJusante`) e a legenda aparece pra distinguir as
+ * duas — o rótulo/unidade vêm prontos em `jusante.label`/`jusante.unit`
+ * (o componente não decide nível-vs-vazão, quem chama já resolve isso e
+ * manda o bundle pronto, ver `JusanteChartSeries`). O domínio Y da COTA é
+ * esticado para incluir TODOS os limiares definidos, mesmo distantes da
+ * linha (contexto), desenhados como anotações tracejadas — a jusante não
+ * tem limiar, seu eixo só encaixa a própria série.
  */
 export default function LevelChart({
   readings,
   thresholds,
+  jusante,
   wide = false,
 }: LevelChartProps) {
   const config = useMemo(() => {
@@ -64,6 +91,13 @@ export default function LevelChart({
       .map((r) => ({ x: r.at.getTime(), y: r.value / 100 }))
       .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
     if (points.length < 2) return null;
+
+    const jusantePoints = (jusante?.points ?? []).filter(
+      (p) => Number.isFinite(p.x) && Number.isFinite(p.y),
+    );
+    const hasJusante = jusantePoints.length > 0;
+    const jusanteLabel = jusante?.label ?? "Jusante";
+    const jusanteUnit = jusante?.unit ?? "m";
 
     const ys = points.map((p) => p.y);
     const thrVals = THRESHOLD_KEYS.map((k) => thresholds[k])
@@ -107,17 +141,37 @@ export default function LevelChart({
     const data: ChartData<"line", { x: number; y: number }[]> = {
       datasets: [
         {
+          label: "Cota",
           data: points,
-          borderColor: "#0369a1",
+          borderColor: COTA_COLOR,
           borderWidth: 2,
           fill: true,
           backgroundColor: "rgba(3,105,161,0.10)",
           pointRadius: 0,
           pointHoverRadius: 4,
-          pointHoverBackgroundColor: "#0369a1",
+          pointHoverBackgroundColor: COTA_COLOR,
           pointHoverBorderColor: "#ffffff",
           tension: 0.25,
+          yAxisID: "y",
         },
+        ...(hasJusante
+          ? [
+              {
+                label: jusanteLabel,
+                data: jusantePoints,
+                borderColor: JUSANTE_COLOR,
+                borderWidth: 2,
+                borderDash: [5, 3],
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: JUSANTE_COLOR,
+                pointHoverBorderColor: "#ffffff",
+                tension: 0.25,
+                yAxisID: "yJusante",
+              },
+            ]
+          : []),
       ],
     };
 
@@ -146,21 +200,55 @@ export default function LevelChart({
           max: hi + pad,
           grid: { color: "#eef2f6" },
           ticks: {
-            color: "#64748b",
+            color: COTA_COLOR,
             font: { size: 10 },
             callback: (value) => Number(value).toFixed(2),
           },
         },
+        // Eixo da JUSANTE (2026-09-15) — PRÓPRIO, à direita, sem
+        // compartilhar escala com a cota (pedido explícito do usuário:
+        // "coloca essa serie em eixo oposto, nao compartilhe eixos"). Só
+        // existe quando há dado de jusante; `grid` desligado nele pra não
+        // duplicar as linhas de fundo do eixo `y` (a grade principal já
+        // basta como referência).
+        ...(hasJusante
+          ? {
+              yJusante: {
+                type: "linear" as const,
+                position: "right" as const,
+                grid: { display: false },
+                ticks: {
+                  color: JUSANTE_COLOR,
+                  font: { size: 10 },
+                  callback: (value: number | string) => Number(value).toFixed(2),
+                },
+              },
+            }
+          : {}),
       },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: hasJusante,
+          position: "top" as const,
+          align: "end" as const,
+          labels: {
+            boxWidth: 14,
+            boxHeight: 2,
+            font: { size: 10 },
+            color: "#475569",
+          },
+        },
         tooltip: {
-          displayColors: false,
+          displayColors: hasJusante,
           callbacks: {
             title: (items: TooltipItem<"line">[]) =>
               fmtDateTime(Number(items[0]?.parsed.x)),
-            label: (item: TooltipItem<"line">) =>
-              `${item.parsed.y.toFixed(3)} m`,
+            label: (item: TooltipItem<"line">) => {
+              if (!hasJusante) return `${item.parsed.y.toFixed(3)} m`;
+              const isJusante = item.dataset.label === jusanteLabel;
+              const unit = isJusante ? jusanteUnit : "m";
+              return `${item.dataset.label}: ${item.parsed.y.toFixed(isJusante ? 2 : 3)} ${unit}`;
+            },
           },
         },
         annotation: { annotations },
@@ -187,7 +275,7 @@ export default function LevelChart({
     };
 
     return { data, options };
-  }, [readings, thresholds, wide]);
+  }, [readings, thresholds, jusante, wide]);
 
   const chartRef = useRef<ChartJS<"line"> | null>(null);
 

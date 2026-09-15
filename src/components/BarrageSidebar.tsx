@@ -46,7 +46,16 @@ function sameGates(a: Record<string, boolean>, b: Record<string, boolean>): bool
  * comportamento de sempre: só visualiza, sem nenhuma interação.
  */
 export default function BarrageSidebar({ barrageId, onClose, auth }: BarrageSidebarProps) {
-  const { data, isLoading, isError } = useDamStatus();
+  // `enabled: barrageId != null` (2026-09-15) — esse componente fica
+  // MONTADO o tempo todo em `App.tsx` (só o `barrageId` liga/desliga o que
+  // ele mostra, `return null` na linha abaixo), então sem isso `/v1/dams`
+  // era consultada (e reconsultada a cada 60s) sempre, mesmo sem nenhuma
+  // barragem selecionada — e mesmo na Ribeira de Iguape, que nem tem
+  // barragem clicável (suas 8 são só ícone decorativo, `selectable:false`
+  // em `FLOW_SIMPLE_BARRAGES`/`RiverBarrageNode`, `barrageId` nunca fica
+  // setado lá). Ver também `FlowView.tsx` (`useDamStatus(barrages.length >
+  // 0)`), o outro lugar que chama esse hook.
+  const { data, isLoading, isError } = useDamStatus(barrageId != null);
 
   const canEdit =
     !!auth.user && auth.user.roles.some((r) => EDITABLE_ROLES.has(r));
