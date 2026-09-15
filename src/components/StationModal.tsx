@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { GroupType } from "@/api/measurements";
 import { stationsById } from "@/data/stations";
+import type { StationPoint } from "@/types/station";
 import { useStationHistory } from "@/hooks/useStationHistory";
 import { useStationStatus } from "@/hooks/useStationStatus";
 import DateRangeControl from "@/components/DateRangeControl";
@@ -9,6 +10,12 @@ import ReadingsTable from "@/components/ReadingsTable";
 import ViewModeToggle, { type ViewMode } from "@/components/ViewModeToggle";
 
 interface StationModalProps {
+  /** Postos/ids da área de interesse ativa — mesma referência estável que
+   * `MapView`/`FlowView` já usam, pra reaproveitar o cache de
+   * medições/parâmetros já buscado em vez de disparar request nova (ver
+   * comentário em `StationSidebar.tsx` — mesmo bug, mesmo fix). */
+  stations: StationPoint[];
+  stationIds: number[];
   stationId: number;
   onClose: () => void;
 }
@@ -20,7 +27,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * agrupamento por minuto por padrão, com seletor de intervalo + agrupamento
  * que dispara nova requisição.
  */
-export default function StationModal({ stationId, onClose }: StationModalProps) {
+export default function StationModal({
+  stations,
+  stationIds,
+  stationId,
+  onClose,
+}: StationModalProps) {
   const [range, setRange] = useState(() => {
     const end = new Date();
     return {
@@ -31,13 +43,11 @@ export default function StationModal({ stationId, onClose }: StationModalProps) 
   });
 
   const [viewMode, setViewMode] = useState<ViewMode>("chart");
-  // Lookup é global (id é único entre bacias) — só busca status DESSE posto
-  // (só usado aqui pros `thresholds`; a série vem de `useStationHistory`
-  // abaixo, com a janela própria do modal) — 2026-09-14.
+  // `stations`/`stationIds` da região inteira — reaproveita o cache já
+  // buscado (só usado aqui pros `thresholds`; a série vem de
+  // `useStationHistory` abaixo, com a janela própria do modal).
   const station = stationsById.get(stationId);
-  const statusStations = useMemo(() => (station ? [station] : []), [station]);
-  const statusIds = useMemo(() => (station ? [station.id] : []), [station]);
-  const { byId } = useStationStatus(statusStations, statusIds);
+  const { byId } = useStationStatus(stations, stationIds);
   const history = useStationHistory(
     stationId,
     range.start.toISOString(),

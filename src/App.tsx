@@ -297,6 +297,8 @@ export default function App() {
           }
         />
         <StationSidebar
+          stations={activeStations}
+          stationIds={activeStationIds}
           stationId={selectedId}
           referenceDate={referenceDate}
           onClose={closeStation}
@@ -306,6 +308,8 @@ export default function App() {
         {modalOpen && selectedId != null && (
           <StationModal
             key={selectedId}
+            stations={activeStations}
+            stationIds={activeStationIds}
             stationId={selectedId}
             onClose={() => setModalOpen(false)}
           />

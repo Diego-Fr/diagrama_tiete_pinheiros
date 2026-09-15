@@ -154,7 +154,8 @@ function loadFlowSettings(): FlowSettings {
  * ou o default de mobile) ANTES de decidir se aplicam no `MapSettings` ou
  * no `FlowSettings`: `?vw=flow&bf=basico` seta o formato do DIAGRAMA, não
  * do mapa. `bl` (baseLayer) é sempre do mapa, não depende da view (só
- * mapa tem camada base).
+ * mapa tem camada base). `dg` (área de interesse/diagrama) é independente
+ * da view — troca o dataset de postos + pacote curado, ver `App.tsx`.
  */
 const QUERY_KEYS = {
   boxFormat: "bf",
@@ -162,10 +163,12 @@ const QUERY_KEYS = {
   baseLayer: "bl",
   riverFlowAnimation: "rf",
   view: "vw",
+  diagram: "dg",
 } as const;
 
 interface QueryOverrides {
   view?: AppView;
+  diagramId?: string;
   map: Partial<MapSettings>;
   flow: Partial<FlowSettings>;
 }
@@ -184,6 +187,9 @@ interface QueryOverrides {
  *
  * Params aceitos:
  * - `vw` (view): "map" | "flow" — persiste, ao contrário dos demais
+ * - `dg` (diagramId — área de interesse/bacia): um dos ids de
+ *   `AVAILABLE_DIAGRAMS` (hoje: "tiete-pinheiros" | "ribeira-iguape") —
+ *   persiste, mesmo padrão do `vw`
  * - `bf` (boxFormat, do mapa OU do diagrama conforme a `view` resolvida):
  *   "completo" | "default" | "basico" | "minimalista"
  * - `bs` (boxSize, idem): "padrao" | "grande" | "extra-grande" | "gigante"
@@ -204,6 +210,11 @@ function loadQueryOverrides(resolvedView: AppView): QueryOverrides {
   const vw = params.get(QUERY_KEYS.view);
   if (vw != null && (APP_VIEWS as string[]).includes(vw)) {
     overrides.view = vw as AppView;
+  }
+
+  const dg = params.get(QUERY_KEYS.diagram);
+  if (dg != null && DIAGRAM_IDS.includes(dg)) {
+    overrides.diagramId = dg;
   }
 
   const bl = params.get(QUERY_KEYS.baseLayer);
@@ -249,10 +260,15 @@ function persist(key: string, value: unknown) {
  * misturar. `diagramId` persiste sempre (mesmo padrão de `view` — pedido
  * do usuário, 2026-09-13, estendido pra área de interesse em 2026-09-14:
  * "essa alteração também deve ser salva no localStorage como preferência
- * do usuário").
+ * do usuário"). Também trocável via query param `dg` (2026-09-15, mesmo
+ * padrão do `vw` — ver `loadQueryOverrides`).
  */
 export function useSettings() {
-  const [diagramId, setDiagramIdState] = useState<string>(loadDiagramId);
+  const [diagramId, setDiagramIdState] = useState<string>(() => {
+    const raw = loadDiagramId();
+    const query = loadQueryOverrides(loadView());
+    return query.diagramId ?? raw;
+  });
   // `view` primeiro — os overrides de query de bf/bs/rf dependem de saber
   // qual view está ativa (pra decidir mapa ou diagrama).
   const [view, setViewState] = useState<AppView>(() => {
@@ -303,12 +319,14 @@ export function useSettings() {
     [],
   );
 
-  // Se a URL tinha um `vw` válido, essa escolha vira a preferência salva
-  // dali em diante (diferente dos outros query params, que só valem pra
-  // essa visita) — pedido do usuário, 2026-09-13. Só roda 1x, no mount.
+  // Se a URL tinha um `vw`/`dg` válido, essa escolha vira a preferência
+  // salva dali em diante (diferente dos outros query params, que só valem
+  // pra essa visita) — pedido do usuário, 2026-09-13 (vw) / 2026-09-15
+  // (dg, mesmo padrão). Só roda 1x, no mount.
   useEffect(() => {
     const query = loadQueryOverrides(view);
     if (query.view) setView(query.view);
+    if (query.diagramId) setDiagramId(query.diagramId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

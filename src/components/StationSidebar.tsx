@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { stationsById } from "@/data/stations";
+import type { StationPoint } from "@/types/station";
 import { useStationStatus } from "@/hooks/useStationStatus";
 import { LEVEL_LABELS } from "@/lib/classification";
 import { formatDateTimeBR, formatFullDateTimeBR } from "@/lib/datetime";
@@ -11,6 +12,18 @@ import TrendArrow from "@/components/TrendArrow";
 import ViewModeToggle, { type ViewMode } from "@/components/ViewModeToggle";
 
 interface StationSidebarProps {
+  /** Postos da área de interesse ativa (`REGION_STATIONS[region]`) — MESMA
+   * lista (mesma referência estável) que `MapView`/`FlowView` já usam, de
+   * propósito: `useStationStatus` monta a queryKey a partir disso, então
+   * passar a lista da região inteira (em vez de só este posto) reaproveita
+   * o cache que o mapa/diagrama já preencheram, sem nova requisição
+   * (bug real corrigido em 2026-09-15 — uma "otimização" anterior que
+   * passava só `[station]` parecia mais econômica, mas na prática tinha o
+   * efeito OPOSTO: criava uma queryKey diferente da já usada pelo
+   * mapa/diagrama, então toda abertura de sidebar disparava uma request
+   * nova pra medições E parâmetros, mesmo já tendo os dados). */
+  stations: StationPoint[];
+  stationIds: number[];
   stationId: number | null;
   /** null = agora (ao vivo); data fixa = janela de 6h congelada nela. */
   referenceDate: Date | null;
@@ -30,21 +43,23 @@ function trendOf(prev: number | undefined, last: number): Trend {
  * (sem nova requisição). Fecha no botão ou ao clicar no mapa.
  */
 export default function StationSidebar({
+  stations,
+  stationIds,
   stationId,
   referenceDate,
   onClose,
   onExpand,
 }: StationSidebarProps) {
-  // Lookup é global (id é único entre bacias, ver `data/stations.ts`) — só
-  // busca status DESSE posto (não da área de interesse inteira), estável
-  // por `useMemo` pra não recriar a queryKey a cada render (2026-09-14).
-  const station = stationId != null ? stationsById.get(stationId) : undefined;
-  const statusStations = useMemo(() => (station ? [station] : []), [station]);
-  const statusIds = useMemo(() => (station ? [station.id] : []), [station]);
-  const { byId } = useStationStatus(statusStations, statusIds, referenceDate);
+  // `stations`/`stationIds` são a lista da REGIÃO INTEIRA (mesma referência
+  // que MapView/FlowView usam) — reaproveita o cache já buscado, não
+  // dispara request nova (ver comentário na prop, acima).
+  const { byId } = useStationStatus(stations, stationIds, referenceDate);
   const [viewMode, setViewMode] = useState<ViewMode>("chart");
 
-  if (stationId == null || !station) return null;
+  if (stationId == null) return null;
+  // Lookup é global (id é único entre bacias, ver `data/stations.ts`).
+  const station = stationsById.get(stationId);
+  if (!station) return null;
 
   const status = byId.get(stationId);
   const series = status?.series ?? null;

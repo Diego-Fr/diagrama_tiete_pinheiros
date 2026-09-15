@@ -53,6 +53,12 @@
  * Capivari (748) — `j-pardo-dot`, novo, parte o antigo segmento único
  * `j-pardo-1→j-pardo-2` em dois.
  *
+ * **Juquiá (4F-018) na ponta de montante do Rio Juquiá-Guaçu**
+ * (2026-09-15, pedido do usuário) — o Rio Juquiá-Guaçu deixou de ser só
+ * informativo, ganhou seu 1º posto real: flutua do lado LESTE de
+ * `j-juquiaguacu-1` (topo da linha, y=234), lado oposto ao rótulo do rio.
+ *
+
  * Sem barragem monitorada conhecida nessa bacia — `FLOW_BARRAGE_POSITIONS`
  * fica vazio (o traço grosso perto do Rio Capivari na imagem é só a
  * pontinha/tampa decorativa do desenho original, sem API de comportas
@@ -148,6 +154,12 @@ export const FLOW_STATION_POSITIONS: FlowStationPosition[] = [
   // (`j-pardo-dot`, x=220 y=678), não no tronco. Flutua pro lado OESTE
   // (o lado leste, na mesma altura, já tem o próprio Rio Turvo passando).
   { stationId: 30854, x: 220 - OFF, y: 678 },
+
+  // Juquiá (Estrada do Pouso Alto, 4F-018) — na ponta de montante do Rio
+  // Juquiá-Guaçu (`j-juquiaguacu-1`, x=840 y=234), pedido do usuário
+  // (2026-09-15). Flutua pro lado LESTE (o rótulo "RIO JUQUIÁ-GUAÇU" já
+  // fica do lado oeste da linha).
+  { stationId: 29728, x: 840 + OFF, y: 234 },
 ];
 
 export const FLOW_POSITION_BY_STATION_ID = new Map(
@@ -283,6 +295,8 @@ export const FLOW_LEADERS: FlowPipe[] = [
   // Barra do Turvo (5F-010) — não fica no tronco, fica no pontinho de
   // monitoramento em cima do Rio Pardo (ver cabeçalho do arquivo).
   { id: "l-pardo-dot", from: "j-pardo-dot", to: 30854, river: "pardo" },
+  // Juquiá (4F-018) — na ponta de montante do Rio Juquiá-Guaçu.
+  { id: "l-juquiaguacu", from: "j-juquiaguacu-1", to: 29728, river: "juquiaguacu" },
 ];
 
 /** Mesmo offset do Tietê. */
@@ -322,8 +336,8 @@ export const FLOW_BARRAGE_POSITION_BY_ID = new Map<string, FlowBarragePosition>(
  * meio do tronco medido ((114+1401)/2 ≈ 758); `y` abaixo de onde os
  * afluentes mais fundos terminam (Guaraú vai até y=830 — ~150px de
  * respiro). */
-export const FLOW_LOGO_POSITION = { x: 650, y: 900 };
-export const FLOW_SIBH_LOGO_POSITION = { x: 650, y: 990 };
+export const FLOW_LOGO_POSITION = { x: 650, y: 800 };
+export const FLOW_SIBH_LOGO_POSITION = { x: 650, y: 890 };
 
 export const RIBEIRA_FLOW_DIAGRAM: FlowDiagramConfig = {
   FLOW_STATION_POSITIONS,
