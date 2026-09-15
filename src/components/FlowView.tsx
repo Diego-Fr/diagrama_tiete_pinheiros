@@ -12,21 +12,11 @@ import {
   type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { fluviometricStations } from "@/data/stations";
-import { barrages } from "@/data/barrages";
+import type { Barrage } from "@/data/barrages";
 import type { BoxFormat } from "@/lib/boxFormat";
 import type { LevelClass } from "@/lib/classification";
-import {
-  FLOW_BARRAGE_POSITION_BY_ID,
-  FLOW_JUNCTIONS,
-  FLOW_LEADERS,
-  FLOW_LOGO_POSITION,
-  FLOW_PIPES,
-  FLOW_POSITION_BY_STATION_ID,
-  FLOW_RIVER_LABELS,
-  FLOW_SIBH_LOGO_POSITION,
-  endpointNodeId,
-} from "@/config/flowDiagram";
+import type { StationPoint } from "@/types/station";
+import { endpointNodeId, type FlowDiagramConfig } from "@/config/flowShared";
 import { useStationStatus } from "@/hooks/useStationStatus";
 import { useDamStatus } from "@/hooks/useDamStatus";
 import AgencyLogoNode, { type AgencyLogoNodeType } from "@/components/flow/AgencyLogoNode";
@@ -47,37 +37,49 @@ const nodeTypes: NodeTypes = {
 };
 const edgeTypes: EdgeTypes = { pipe: PipeEdge };
 
-const ANCHOR_NODES: Node[] = FLOW_JUNCTIONS.map((j) => ({
-  id: j.id,
-  type: "anchor",
-  position: { x: j.x, y: j.y },
-  draggable: false,
-  selectable: false,
-  data: {},
-}));
+/**
+ * Nós fixos do esquema (âncoras/rótulos/logos) — funções, não mais
+ * constantes de módulo (2026-09-14: cada bacia tem seu próprio
+ * `FlowDiagramConfig`, então dependem do `flowDiagram` ativo — viram
+ * `useMemo` dentro do componente, recalculados só quando a área de
+ * interesse muda).
+ */
+function buildAnchorNodes(flowDiagram: FlowDiagramConfig): Node[] {
+  return flowDiagram.FLOW_JUNCTIONS.map((j) => ({
+    id: j.id,
+    type: "anchor",
+    position: { x: j.x, y: j.y },
+    draggable: false,
+    selectable: false,
+    data: {},
+  }));
+}
 
-const LOGO_NODE: AgencyLogoNodeType = {
-  id: "agency-logo",
-  type: "agencyLogo",
-  position: FLOW_LOGO_POSITION,
-  width: 180,
-  height: 119,
-  draggable: false,
-  selectable: false,
-  data: { variant: "spaguas" },
-};
-
-// Wordmark SIBH (123×38 de proporção) um pouco menor que a da SP Águas.
-const SIBH_LOGO_NODE: AgencyLogoNodeType = {
-  id: "sibh-logo",
-  type: "agencyLogo",
-  position: FLOW_SIBH_LOGO_POSITION,
-  width: 140,
-  height: 43,
-  draggable: false,
-  selectable: false,
-  data: { variant: "sibh" },
-};
+function buildLogoNodes(flowDiagram: FlowDiagramConfig): AgencyLogoNodeType[] {
+  return [
+    {
+      id: "agency-logo",
+      type: "agencyLogo",
+      position: flowDiagram.FLOW_LOGO_POSITION,
+      width: 180,
+      height: 119,
+      draggable: false,
+      selectable: false,
+      data: { variant: "spaguas" },
+    },
+    // Wordmark SIBH (123×38 de proporção) um pouco menor que a da SP Águas.
+    {
+      id: "sibh-logo",
+      type: "agencyLogo",
+      position: flowDiagram.FLOW_SIBH_LOGO_POSITION,
+      width: 140,
+      height: 43,
+      draggable: false,
+      selectable: false,
+      data: { variant: "sibh" },
+    },
+  ];
+}
 
 /**
  * O React Flow mede o node pela caixa NÃO rotacionada (o `transform:
@@ -97,26 +99,39 @@ function estimateLabelSize(text: string, angle: number): { width: number; height
     : { width: thickness, height: textLength };
 }
 
-const LABEL_NODES: Node[] = FLOW_RIVER_LABELS.map((l) => {
-  const { width, height } = estimateLabelSize(l.text, l.angle);
-  return {
-    id: l.id,
-    type: "riverLabel",
-    position: { x: l.x, y: l.y },
-    width,
-    height,
-    draggable: false,
-    selectable: false,
-    data: { text: l.text, angle: l.angle },
-  };
-});
+function buildLabelNodes(flowDiagram: FlowDiagramConfig): Node[] {
+  return flowDiagram.FLOW_RIVER_LABELS.map((l) => {
+    const { width, height } = estimateLabelSize(l.text, l.angle);
+    return {
+      id: l.id,
+      type: "riverLabel",
+      position: { x: l.x, y: l.y },
+      width,
+      height,
+      draggable: false,
+      selectable: false,
+      data: { text: l.text, angle: l.angle },
+    };
+  });
+}
 
-const ALL_EDGE_DEFS = [
-  ...FLOW_PIPES.map((p) => ({ ...p, kind: "pipe" as const })),
-  ...FLOW_LEADERS.map((l) => ({ ...l, kind: "leader" as const })),
-];
+function buildEdgeDefs(flowDiagram: FlowDiagramConfig) {
+  return [
+    ...flowDiagram.FLOW_PIPES.map((p) => ({ ...p, kind: "pipe" as const })),
+    ...flowDiagram.FLOW_LEADERS.map((l) => ({ ...l, kind: "leader" as const })),
+  ];
+}
 
 interface FlowViewProps {
+  /** Postos da área de interesse ativa (`REGION_STATIONS[region]`). */
+  stations: StationPoint[];
+  /** Ids da mesma lista — referência estável (`REGION_STATION_IDS[region]`). */
+  stationIds: number[];
+  /** Pacote curado da área de interesse ativa (`FLOW_DIAGRAMS[region]`). */
+  flowDiagram: FlowDiagramConfig;
+  /** Barragens a desenhar — vazio pra bacias sem estrutura monitorada
+   * (2026-09-14: Ribeira de Iguape não tem nenhuma conhecida). */
+  barrages: Barrage[];
   /** null = agora (ao vivo); data fixa = janela de 6h congelada nela. */
   referenceDate: Date | null;
   boxFormat: BoxFormat;
@@ -158,6 +173,10 @@ interface FlowViewProps {
  * sidebar/modal do mapa.
  */
 export default function FlowView({
+  stations,
+  stationIds,
+  flowDiagram,
+  barrages,
   referenceDate,
   boxFormat,
   riverFlow,
@@ -173,8 +192,15 @@ export default function FlowView({
   onDragStation,
   onPaneClick,
 }: FlowViewProps) {
-  const { byId } = useStationStatus(referenceDate);
+  const { byId } = useStationStatus(stations, stationIds, referenceDate);
   const { data: damData } = useDamStatus();
+
+  // Recalculados só quando a área de interesse muda (2026-09-14) — antes
+  // eram constantes de módulo fixas no Tietê.
+  const anchorNodes = useMemo(() => buildAnchorNodes(flowDiagram), [flowDiagram]);
+  const labelNodes = useMemo(() => buildLabelNodes(flowDiagram), [flowDiagram]);
+  const logoNodes = useMemo(() => buildLogoNodes(flowDiagram), [flowDiagram]);
+  const edgeDefs = useMemo(() => buildEdgeDefs(flowDiagram), [flowDiagram]);
 
   // Reenquadra (fitView) só na hora do print, pra sair sempre com o
   // diagrama inteiro visível, o mais próximo possível — não o zoom/pan que
@@ -201,16 +227,16 @@ export default function FlowView({
 
   const nodes: Node[] = useMemo(() => {
     let fallbackIndex = 0;
-    const stationNodes: StationNode[] = fluviometricStations
+    const stationNodes: StationNode[] = stations
       .map((s) => {
         const status = byId.get(s.id);
         const classification = status?.classification ?? "normal";
-        const pos = FLOW_POSITION_BY_STATION_ID.get(s.id);
+        const pos = flowDiagram.FLOW_POSITION_BY_STATION_ID.get(s.id);
         if (!pos) {
           // Posto novo, ainda sem lugar curado no esquema — empilha à parte
           // em vez de sumir, pra não passar despercebido.
           console.warn(
-            `Posto ${s.id} (${s.name}) sem posição em flowDiagram.ts — usando posição de reserva.`,
+            `Posto ${s.id} (${s.name}) sem posição no diagrama curado — usando posição de reserva.`,
           );
         }
         const curated = pos ?? { x: -300, y: 400 + fallbackIndex++ * 60 };
@@ -240,9 +266,9 @@ export default function FlowView({
       });
 
     const barrageNodes: BarrageNodeType[] = barrages.map((b) => {
-      const pos = FLOW_BARRAGE_POSITION_BY_ID.get(b.id);
+      const pos = flowDiagram.FLOW_BARRAGE_POSITION_BY_ID.get(b.id);
       if (!pos) {
-        console.warn(`Barragem ${b.id} (${b.name}) sem posição em flowDiagram.ts.`);
+        console.warn(`Barragem ${b.id} (${b.name}) sem posição no diagrama curado.`);
       }
       const { x, y } = pos ?? { x: -300, y: 400 + fallbackIndex++ * 60 };
       // Dado real (/sibh/api/v1/dams) quando disponível; senão, fallback
@@ -266,8 +292,14 @@ export default function FlowView({
       };
     });
 
-    return [...ANCHOR_NODES, ...LABEL_NODES, ...stationNodes, ...barrageNodes, LOGO_NODE, SIBH_LOGO_NODE];
+    return [...anchorNodes, ...labelNodes, ...stationNodes, ...barrageNodes, ...logoNodes];
   }, [
+    stations,
+    flowDiagram,
+    barrages,
+    anchorNodes,
+    labelNodes,
+    logoNodes,
     byId,
     damData,
     boxFormat,
@@ -283,7 +315,7 @@ export default function FlowView({
 
   const edges: Edge<PipeEdgeData>[] = useMemo(
     () =>
-      ALL_EDGE_DEFS.map((e) => ({
+      edgeDefs.map((e) => ({
         id: e.id,
         type: "pipe",
         source: endpointNodeId(e.from),
@@ -292,7 +324,7 @@ export default function FlowView({
         selectable: false,
         focusable: false,
       })),
-    [riverFlow],
+    [edgeDefs, riverFlow],
   );
 
   // Só postos são arrastáveis (`draggable:true` só em `stationNodes` —

@@ -37,9 +37,9 @@ export const BOX_SIZES: BoxSize[] = ["padrao", "grande", "extra-grande", "gigant
 
 export const BOX_SIZE_OPTIONS: { value: BoxSize; label: string; hint: string }[] = [
   { value: "padrao", label: "Padrão", hint: "Tamanho atual" },
-  { value: "grande", label: "Grande", hint: "50% maior" },
-  { value: "extra-grande", label: "Extra grande", hint: "75% maior" },
-  { value: "gigante", label: "Gigante", hint: "100% maior" },
+  { value: "grande", label: "Médio", hint: "50% maior" },
+  { value: "extra-grande", label: "Grande", hint: "75% maior" },
+  { value: "gigante", label: "Extra Grande", hint: "100% maior" },
 ];
 
 /** Multiplicador aplicado a `BOX_DIMS` e, via `--box-scale` (CSS, ver

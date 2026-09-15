@@ -14,6 +14,10 @@ import StationSidebar from "@/components/StationSidebar";
 import StationModal from "@/components/StationModal";
 import BarrageSidebar from "@/components/BarrageSidebar";
 import ViewSwitcher from "@/components/ViewSwitcher";
+import { AVAILABLE_DIAGRAMS } from "@/config/diagrams";
+import { FLOW_DIAGRAMS } from "@/config/flowDiagrams";
+import { barrages as TIETE_BARRAGES } from "@/data/barrages";
+import { REGION_STATIONS, REGION_STATION_IDS } from "@/data/stations";
 import { BOX_SIZE_SCALE } from "@/lib/boxFormat";
 import type { LevelClass } from "@/lib/classification";
 import { formatFileStampBR } from "@/lib/datetime";
@@ -22,6 +26,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSettings } from "@/hooks/useSettings";
 import { useFlowStationPositions } from "@/hooks/useFlowStationPositions";
 import { useStationPositions } from "@/hooks/useStationPositions";
+
+/** Sem barragem monitorada conhecida fora do Tietê/Pinheiros — array vazio
+ * pras demais bacias (2026-09-14, feature de múltiplas áreas de interesse). */
+const NO_BARRAGES: typeof TIETE_BARRAGES = [];
 
 /** Espera 2 frames — deixa o React aplicar (e o navegador pintar) os ajustes
  * de "modo captura" (esconder controles, congelar a data) antes do print. */
@@ -52,8 +60,27 @@ export default function App() {
   // null = agora (ao vivo); data fixa = janela de 6h congelada nela. Só o
   // mapa e a sidebar respeitam isso — o modal mantém sua própria lógica.
   const [referenceDate, setReferenceDate] = useState<Date | null>(null);
-  const { view, setView, mapSettings, setMapSetting, flowSettings, setFlowSetting } =
-    useSettings();
+  const {
+    diagramId,
+    setDiagramId,
+    view,
+    setView,
+    mapSettings,
+    setMapSetting,
+    flowSettings,
+    setFlowSetting,
+  } = useSettings();
+  // Área de interesse ativa (2026-09-14) — o diagrama escolhido decide a
+  // bacia (`region`), que por sua vez decide qual dataset de postos
+  // (`REGION_STATIONS`) e qual pacote curado (`FLOW_DIAGRAMS`) usar. Sem
+  // barragem monitorada fora do Tietê/Pinheiros ainda.
+  const activeDiagram =
+    AVAILABLE_DIAGRAMS.find((d) => d.id === diagramId) ?? AVAILABLE_DIAGRAMS[0]!;
+  const region = activeDiagram.region;
+  const activeStations = REGION_STATIONS[region];
+  const activeStationIds = REGION_STATION_IDS[region];
+  const activeFlowDiagram = FLOW_DIAGRAMS[region];
+  const activeBarrages = region === "tiete" ? TIETE_BARRAGES : NO_BARRAGES;
   // Sessão única (não chamar `useAuth` de novo em outro componente — ver
   // comentário no próprio hook) — repassada pra navbar (mostrar "Bem-vindo")
   // e pra sidebar da barragem (autorizar toggle das comportas).
@@ -153,7 +180,13 @@ export default function App() {
         ref={shellRef}
       >
         <div className="top-bar-left">
-          <AppTitleMenu />
+          <AppTitleMenu
+            value={diagramId}
+            onChange={(id) => {
+              closeSelections();
+              setDiagramId(id);
+            }}
+          />
           <ViewSwitcher
             value={view}
             onChange={(v) => {
@@ -174,10 +207,14 @@ export default function App() {
           closeSignal={mapClickTick}
           captureAsOf={captureAsOf}
         />
-        <RefreshBar referenceDate={referenceDate} />
+        <RefreshBar referenceDate={referenceDate} stationIds={activeStationIds} />
 
         {view === "flow" ? (
           <FlowView
+            stations={activeStations}
+            stationIds={activeStationIds}
+            flowDiagram={activeFlowDiagram}
+            barrages={activeBarrages}
             referenceDate={referenceDate}
             boxFormat={flowSettings.boxFormat}
             riverFlow={effectiveRiverFlow}
@@ -196,6 +233,8 @@ export default function App() {
         ) : (
           <>
             <MapView
+              region={region}
+              stations={activeStations}
               selectedId={selectedId}
               boxFormat={mapSettings.boxFormat}
               boxSize={mapSettings.boxSize}
@@ -224,7 +263,7 @@ export default function App() {
           hidden={hiddenLevels}
           onHover={setHoveredLevel}
           onToggle={toggleLevel}
-          showBarrageItem={view === "flow"}
+          showBarrageItem={view === "flow" && activeBarrages.length > 0}
         />
 
         <MapControls

@@ -1,15 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { AVAILABLE_DIAGRAMS } from "@/config/diagrams";
 
+interface AppTitleMenuProps {
+  value: string;
+  onChange: (diagramId: string) => void;
+}
+
 /**
  * Título do app, dentro de um card branco que simula um select. Clicar abre
- * um menu com os diagramas disponíveis (por enquanto só um). Selecionar o
- * diagrama atual não faz nada além de fechar o menu — a lista existe para
- * quando houver mais de um diagrama.
+ * um menu com os diagramas disponíveis. Selecionar um diferente troca a
+ * área de interesse (dataset de postos + diagrama curado) — controlado por
+ * `App.tsx` (2026-09-14, antes só fechava o menu, não fazia nada; virou
+ * controlado no mesmo padrão do `ViewSwitcher` ao lado quando um 2º
+ * diagrama de verdade entrou, Ribeira de Iguape).
  */
-export default function AppTitleMenu() {
+export default function AppTitleMenu({ value, onChange }: AppTitleMenuProps) {
   const [open, setOpen] = useState(false);
-  const [activeId, setActiveId] = useState(AVAILABLE_DIAGRAMS[0]?.id);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,8 +27,7 @@ export default function AppTitleMenu() {
     return () => document.removeEventListener("mousedown", onOutside);
   }, [open]);
 
-  const active =
-    AVAILABLE_DIAGRAMS.find((d) => d.id === activeId) ?? AVAILABLE_DIAGRAMS[0];
+  const active = AVAILABLE_DIAGRAMS.find((d) => d.id === value) ?? AVAILABLE_DIAGRAMS[0];
 
   return (
     <div className="app-title-menu" ref={rootRef}>
@@ -62,7 +67,7 @@ export default function AppTitleMenu() {
                   d.id === active?.id ? " app-title-menu__item--active" : ""
                 }`}
                 onClick={() => {
-                  setActiveId(d.id);
+                  onChange(d.id);
                   setOpen(false);
                 }}
               >

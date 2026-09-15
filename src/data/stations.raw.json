@@ -1,6 +1,6 @@
 [
   {
-    "name": "São Paulo (Rio Pinheiros - Estrutura de Retiro)",
+    "name": "Rio Pinheiros - Estrutura de Retiro",
     "latitude": -23.531827,
     "longitude": -46.748331,
     "id": 92,
@@ -70,7 +70,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Tietê Barragem Móvel Montante)",
+    "name": "Barragem Móvel Montante",
     "latitude": -23.52556,
     "longitude": -46.75083,
     "id": 33719,
@@ -175,7 +175,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Jardim Romano)",
+    "name": "Jardim Romano",
     "latitude": -23.479425,
     "longitude": -46.385854,
     "id": 33212,
@@ -210,7 +210,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Nucleo Itaim Biacica)",
+    "name": "Nucleo Itaim Biacica",
     "latitude": -23.488767,
     "longitude": -46.402684,
     "id": 35320,
@@ -280,7 +280,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Tietê - Barragem da Penha Jusante)",
+    "name": "Barragem da Penha Jusante",
     "latitude": -23.50288794066811,
     "longitude": -46.5422652118952,
     "id": 33762,
@@ -315,7 +315,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Pinheiros - Superior - Usina Elevatória Traição)",
+    "name": "Rio Pinheiros - Superior - Usina Elevatória Traição",
     "latitude": -23.59582,
     "longitude": -46.6949,
     "id": 114,
@@ -350,7 +350,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Tietê Barragem Móvel Montante)",
+    "name": "Barragem Móvel Montante",
     "latitude": -23.52556,
     "longitude": -46.75083,
     "id": 33720,
@@ -385,7 +385,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Tietê- Ponte Dutra)",
+    "name": "Rio Tietê- Ponte Dutra",
     "latitude": -23.529784332111674,
     "longitude": -46.59160674073891,
     "id": 33741,
@@ -420,7 +420,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Córrego Franquinho - Dom Hélder Câmara)",
+    "name": "Córrego Franquinho - Dom Hélder Câmara",
     "latitude": -23.517003,
     "longitude": -46.5163,
     "id": 33781,
@@ -455,7 +455,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Tietê - São Miguel)",
+    "name": "Rio Tietê - São Miguel",
     "latitude": -23.47315,
     "longitude": -46.42307,
     "id": 33771,
@@ -490,7 +490,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Pinheiros - Superior - Pedreira)",
+    "name": "Rio Pinheiros - Superior - Pedreira",
     "latitude": -23.701938,
     "longitude": -46.675501,
     "id": 117,
@@ -525,7 +525,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Pinheiros - Ponte João Dias)",
+    "name": "Rio Pinheiros - Ponte João Dias",
     "latitude": -23.644303064660775,
     "longitude": -46.72613032739989,
     "id": 868,
@@ -595,7 +595,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Córrego Jacú - Jd. Pantanal)",
+    "name": "Córrego Jacú - Jd. Pantanal",
     "latitude": -23.546372,
     "longitude": -46.446122,
     "id": 33722,
@@ -665,7 +665,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (CTH - USP)",
+    "name": "CTH - USP",
     "latitude": -23.554587,
     "longitude": -46.726661,
     "id": 33697,
@@ -700,7 +700,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Tamanduateí - Mercado Municipal)",
+    "name": "Rio Tamanduateí - Mercado Municipal",
     "latitude": -23.542365,
     "longitude": -46.629651,
     "id": 33767,
@@ -735,7 +735,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Núcleo Jardim Helena)",
+    "name": "Núcleo Jardim Helena",
     "latitude": -23.475762,
     "longitude": -46.415796,
     "id": 35335,
@@ -770,7 +770,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Jardim Romano)",
+    "name": "Jardim Romano",
     "latitude": -23.479425,
     "longitude": -46.385854,
     "id": 33217,
@@ -840,7 +840,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Pinheiros - Inferior - Usina Elevatória Traição)",
+    "name": "Rio Pinheiros - Inferior - Usina Elevatória Traição",
     "latitude": -23.594411,
     "longitude": -46.694286,
     "id": 109,
@@ -910,7 +910,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "Guarulhos (Rio Tietê - Barragem da Penha Montante)",
+    "name": "Barragem da Penha Montante",
     "latitude": -23.50156449948146,
     "longitude": -46.54210401408891,
     "id": 33675,
@@ -945,7 +945,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "Guarulhos (Rio Baquirivu CECAP)",
+    "name": "Rio Baquirivu CECAP",
     "latitude": -23.434733,
     "longitude": -46.494494,
     "id": 35285,
@@ -980,7 +980,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Tietê - Barragem Móvel Jusante - Cebolão)",
+    "name": "Barragem Móvel Jusante - Cebolão",
     "latitude": -23.525824926433344,
     "longitude": -46.75266847266041,
     "id": 33698,
@@ -1050,7 +1050,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Tietê - Ponte do Piqueri)",
+    "name": "Rio Tietê - Ponte do Piqueri",
     "latitude": -23.509468,
     "longitude": -46.705642,
     "id": 33758,
@@ -1085,7 +1085,7 @@
     "public_control": "NULL"
   },
   {
-    "name": "São Paulo (Rio Tietê - Barragem da Penha Jusante)",
+    "name": "Barragem da Penha Jusante",
     "latitude": -23.50288794066811,
     "longitude": -46.5422652118952,
     "id": 33761,
@@ -1151,6 +1151,76 @@
     "date_end_operation": "NULL",
     "battery_linear": 12,
     "net_group": "NULL",
+    "station_operator": "NULL",
+    "public_control": "NULL"
+  },
+  {
+    "name": "Pirapora do Bom Jesus - Montante",
+    "latitude": -23.39111,
+    "longitude": -46.995,
+    "id": 33671,
+    "station_id": 34,
+    "prefix": 1000225,
+    "alt_prefix": "",
+    "station_type_id": 1,
+    "created_at": "2018-07-10 13:29:40.953344",
+    "updated_at": "2026-07-21 16:46:59.971386",
+    "station_owner_id": 2,
+    "operation_status": 2,
+    "transmission_status": 0,
+    "transmission_gap": 10,
+    "measurement_status": 0,
+    "measurement_gap": 10,
+    "battery_status": 0,
+    "data_source": "NULL",
+    "date_last_transmission": "2024-11-15 15:15:32.744",
+    "id_last_measurement": 28302089187,
+    "date_last_measurement": "2026-09-14 14:10:00",
+    "id_penultimate_measurement": 0,
+    "date_penultimate_measurement": "2022-05-16 16:50:00",
+    "date_penultimate_transmission": "2022-05-16 17:00:39.16901",
+    "cod_project": "",
+    "altitude": 0,
+    "public": "False",
+    "date_start_operation": "NULL",
+    "date_end_operation": "NULL",
+    "battery_linear": 12,
+    "net_group": "alto_tiete",
+    "station_operator": "NULL",
+    "public_control": "NULL"
+  },
+  {
+    "name": "Estação Edgar de Souza Montante",
+    "latitude": -23.45451,
+    "longitude": -46.91017,
+    "id": 929,
+    "station_id": 5272,
+    "prefix": 1000881,
+    "alt_prefix": "",
+    "station_type_id": 1,
+    "created_at": "2024-11-26 17:36:10.800192",
+    "updated_at": "2026-06-16 19:42:12.473114",
+    "station_owner_id": 2,
+    "operation_status": 1,
+    "transmission_status": 1,
+    "transmission_gap": 10,
+    "measurement_status": "NULL",
+    "measurement_gap": 10,
+    "battery_status": "NULL",
+    "data_source": "NULL",
+    "date_last_transmission": "NULL",
+    "id_last_measurement": "NULL",
+    "date_last_measurement": "2025-01-16 12:50:00",
+    "id_penultimate_measurement": "NULL",
+    "date_penultimate_measurement": "NULL",
+    "date_penultimate_transmission": "NULL",
+    "cod_project": "",
+    "altitude": "NULL",
+    "public": "True",
+    "date_start_operation": "NULL",
+    "date_end_operation": "NULL",
+    "battery_linear": 80,
+    "net_group": "emae",
     "station_operator": "NULL",
     "public_control": "NULL"
   }

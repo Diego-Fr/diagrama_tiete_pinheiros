@@ -10,7 +10,7 @@ import { FRESHNESS_LABELS, type Freshness } from "@/lib/freshness";
 import { formatMeters, trendOf } from "@/lib/stationFormat";
 import { TREND_PATHS, type Trend } from "@/lib/trendIcons";
 import type { LatLngTuple } from "@/hooks/useStationPositions";
-import { fluviometricStations } from "@/data/stations";
+import type { StationPoint } from "@/types/station";
 import { useStationStatus } from "@/hooks/useStationStatus";
 
 /**
@@ -150,6 +150,9 @@ function isAtAnchor(anchor: LatLngTuple, pos: LatLngTuple): boolean {
 }
 
 interface StationsLayerProps {
+  /** Postos da área de interesse ativa (`REGION_STATIONS[region]`) —
+   * referência estável por região (2026-09-14). */
+  stations: StationPoint[];
   selectedId: number | null;
   boxFormat: BoxFormat;
   boxSize: BoxSize;
@@ -170,6 +173,7 @@ interface StationsLayerProps {
 }
 
 export default function StationsLayer({
+  stations,
   selectedId,
   boxFormat,
   boxSize,
@@ -182,14 +186,15 @@ export default function StationsLayer({
   onDragStation,
 }: StationsLayerProps) {
   const map = useMap();
-  const { byId } = useStationStatus(referenceDate);
+  const stationIds = useMemo(() => stations.map((s) => s.id), [stations]);
+  const { byId } = useStationStatus(stations, stationIds, referenceDate);
   const [autoPos, setAutoPos] = useState<Map<number, LatLngTuple>>(new Map());
 
   // Recalcula o anti-overlap em espaço de tela e converte de volta p/ lat/lng.
   // (Independe dos ajustes manuais — esses só entram na hora de exibir.)
   const solve = useCallback(() => {
     const dims = scaledBoxDims(boxFormat, boxSize);
-    const items = fluviometricStations.map((s) => {
+    const items = stations.map((s) => {
       const p = map.latLngToContainerPoint([s.lat, s.lng]);
       return { id: s.id, ax: p.x, ay: p.y, hw: dims.w / 2, hh: dims.h / 2 };
     });
@@ -202,10 +207,12 @@ export default function StationsLayer({
       pos.set(it.id, [ll.lat, ll.lng]);
     }
     setAutoPos(pos);
-  }, [map, boxFormat, boxSize]);
+  }, [map, stations, boxFormat, boxSize]);
 
   // Geometria relativa só muda com zoom/resize; pan é invariante (markers
-  // acompanham por lat/lng).
+  // acompanham por lat/lng). Refaz também quando a lista de postos muda
+  // (troca de área de interesse) — senão o declutter ficaria com posições
+  // calculadas pra bacia anterior.
   useEffect(() => {
     solve();
     map.on("zoomend resize", solve);
@@ -217,7 +224,7 @@ export default function StationsLayer({
   // Ícones mudam quando chega/atualiza série, classificação ou seleção.
   const icons = useMemo(() => {
     const m = new Map<number, L.DivIcon>();
-    for (const s of fluviometricStations) {
+    for (const s of stations) {
       const status = byId.get(s.id);
       m.set(
         s.id,
@@ -233,11 +240,11 @@ export default function StationsLayer({
       );
     }
     return m;
-  }, [byId, selectedId, boxFormat, boxSize]);
+  }, [stations, byId, selectedId, boxFormat, boxSize]);
 
   return (
     <>
-      {fluviometricStations.map((s) => {
+      {stations.map((s) => {
         const status = byId.get(s.id);
         const level = status?.classification ?? "normal";
         if (hiddenLevels.has(level)) return null; // ocultado na legenda

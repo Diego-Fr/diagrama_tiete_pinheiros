@@ -20,6 +20,19 @@ export interface RawStation {
 
 export type StationKind = "nivel" | "chuva" | "outro";
 
+/**
+ * Área de interesse / bacia — cada uma tem seu próprio dataset de postos
+ * (`stations.raw.json`/`stations_ribeira.raw.json`) e seu próprio diagrama
+ * curado (`config/flowDiagram.ts`/`config/flowDiagramRibeira.ts`). Ver
+ * `config/diagrams.ts` (seletor no título) e `data/stations.ts` (merge +
+ * filtro por região). IDs de posto são únicos entre as duas bacias (sem
+ * colisão, conferido em 2026-09-14), então um lookup global por id
+ * (`stationsById`) continua seguro — só as listas/telas que mostram "todos
+ * os postos" (mapa, diagrama, refresh bar) precisam ser filtradas por
+ * região.
+ */
+export type Region = "tiete" | "ribeira";
+
 /** Forma normalizada usada pela UI. */
 export interface StationPoint {
   id: number;
@@ -32,5 +45,7 @@ export interface StationPoint {
   kind: StationKind;
   /** Intervalo de medição esperado (min) — base do indicador de atraso. */
   measurementGap: number;
+  /** Bacia/área de interesse a que esse posto pertence. */
+  region: Region;
   raw: RawStation;
 }

@@ -1,5 +1,6 @@
-import rawStations from "./stations.raw.json";
-import type { RawStation, StationKind, StationPoint } from "@/types/station";
+import rawStationsTiete from "./stations.raw.json";
+import rawStationsRibeira from "./stations_ribeira.raw.json";
+import type { RawStation, Region, StationKind, StationPoint } from "@/types/station";
 
 const NULLISH = new Set(["", "NULL", "null", "undefined"]);
 
@@ -42,30 +43,59 @@ function toMeasurementGap(raw: RawStation): number {
   return 10;
 }
 
-export const stations: StationPoint[] = (rawStations as unknown as RawStation[])
-  .filter(
-    (r) =>
-      Number.isFinite(r.latitude) &&
-      Number.isFinite(r.longitude) &&
-      r.latitude !== 0 &&
-      r.longitude !== 0,
-  )
-  .map((r) => ({
-    id: r.id,
-    stationId: r.station_id,
-    name: r.name,
-    lat: r.latitude,
-    lng: r.longitude,
-    prefix: toDisplayPrefix(r),
-    kind: toKind(r.station_type_id),
-    measurementGap: toMeasurementGap(r),
-    raw: r,
-  }));
+/** Cada bacia tem seu próprio JSON cru — mesclados aqui, cada posto marcado
+ * com a `region` de origem (2026-09-14, feature de múltiplas áreas de
+ * interesse). Os ids são únicos entre as duas fontes (conferido: 0
+ * colisões) — um `Map` único por id (`stationsById`) continua seguro. */
+const RAW_BY_REGION: Record<Region, RawStation[]> = {
+  tiete: rawStationsTiete as unknown as RawStation[],
+  ribeira: rawStationsRibeira as unknown as RawStation[],
+};
+
+function toStationPoints(raw: RawStation[], region: Region): StationPoint[] {
+  return raw
+    .filter(
+      (r) =>
+        Number.isFinite(r.latitude) &&
+        Number.isFinite(r.longitude) &&
+        r.latitude !== 0 &&
+        r.longitude !== 0,
+    )
+    .map((r) => ({
+      id: r.id,
+      stationId: r.station_id,
+      name: r.name,
+      lat: r.latitude,
+      lng: r.longitude,
+      prefix: toDisplayPrefix(r),
+      kind: toKind(r.station_type_id),
+      measurementGap: toMeasurementGap(r),
+      region,
+      raw: r,
+    }));
+}
+
+/** Todos os postos de todas as bacias, mesclados — só para lookup global por
+ * id (`stationsById`), que é seguro entre regiões (ids não colidem). Telas
+ * que listam "todos os postos" (mapa, diagrama, refresh bar) NÃO devem usar
+ * isso direto — usar `REGION_STATIONS[region]`/`REGION_FLUVIOMETRIC_IDS[region]`. */
+export const stations: StationPoint[] = (
+  Object.keys(RAW_BY_REGION) as Region[]
+).flatMap((region) => toStationPoints(RAW_BY_REGION[region], region));
 
 export const stationsById = new Map(stations.map((s) => [s.id, s]));
 
-/** Estações fluviométricas (station_type_id === 1) — as únicas no mapa por ora. */
-export const fluviometricStations = stations.filter((s) => s.kind === "nivel");
+/** Estações fluviométricas (station_type_id === 1) de cada bacia — as
+ * únicas exibidas no mapa/diagrama por ora. Arrays estáveis (computados uma
+ * vez no load do módulo) — seguros como dependência de `useMemo`/queryKey. */
+export const REGION_STATIONS: Record<Region, StationPoint[]> = {
+  tiete: stations.filter((s) => s.region === "tiete" && s.kind === "nivel"),
+  ribeira: stations.filter((s) => s.region === "ribeira" && s.kind === "nivel"),
+};
 
-/** Ids das fluviométricas; referência estável para usar como queryKey. */
-export const fluviometricIds = fluviometricStations.map((s) => s.id);
+/** Ids das fluviométricas de cada bacia; referência estável para usar como
+ * queryKey (`useMeasurements`/`useParameters`). */
+export const REGION_STATION_IDS: Record<Region, number[]> = {
+  tiete: REGION_STATIONS.tiete.map((s) => s.id),
+  ribeira: REGION_STATIONS.ribeira.map((s) => s.id),
+};

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { BOX_FORMATS, BOX_SIZES, type BoxFormat, type BoxSize } from "@/lib/boxFormat";
 import type { AppView } from "@/components/ViewSwitcher";
+import { AVAILABLE_DIAGRAMS } from "@/config/diagrams";
 
 export type BaseLayerId = "gray" | "satellite";
 const BASE_LAYERS: BaseLayerId[] = ["gray", "satellite"];
 const APP_VIEWS: AppView[] = ["map", "flow"];
+const DIAGRAM_IDS = AVAILABLE_DIAGRAMS.map((d) => d.id);
 
 /**
  * Configurações do MAPA e do DIAGRAMA são independentes (pedido do usuário,
@@ -41,6 +43,7 @@ const FLOW_DEFAULTS: FlowSettings = {
 const MAP_STORAGE_KEY = "diagrama-tiete:map-settings";
 const FLOW_STORAGE_KEY = "diagrama-tiete:flow-settings";
 const VIEW_STORAGE_KEY = "diagrama-tiete:view";
+const DIAGRAM_STORAGE_KEY = "diagrama-tiete:diagram";
 
 /** Só usado quando NENHUMA preferência de `view` foi salva ainda — mapa
  * geográfico não fica bom no celular (pedido do usuário, 2026-09-12), então
@@ -66,6 +69,25 @@ function loadView(): AppView {
     return parsed === "map" || parsed === "flow" ? parsed : defaultView();
   } catch {
     return defaultView();
+  }
+}
+
+/** Área de interesse/diagrama ativo — SEMPRE o Tietê/Pinheiros quando não
+ * há nada salvo ainda (histórico: era o único diagrama até 2026-09-14). */
+function defaultDiagramId(): string {
+  return AVAILABLE_DIAGRAMS[0]?.id ?? "tiete-pinheiros";
+}
+
+function loadDiagramId(): string {
+  try {
+    const raw = localStorage.getItem(DIAGRAM_STORAGE_KEY);
+    if (raw == null) return defaultDiagramId();
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "string" && DIAGRAM_IDS.includes(parsed)
+      ? parsed
+      : defaultDiagramId();
+  } catch {
+    return defaultDiagramId();
   }
 }
 
@@ -219,12 +241,18 @@ function persist(key: string, value: unknown) {
 }
 
 /**
- * Configurações do usuário, em 3 pedaços independentes: `view` (mapa ↔
- * diagrama — decide qual dos outros dois está "ativo"), `mapSettings` e
+ * Configurações do usuário, em 4 pedaços independentes: `diagramId` (área
+ * de interesse/bacia — Tietê ou Ribeira, decide qual dataset de postos e
+ * qual pacote curado carregar, ver `App.tsx`), `view` (mapa ↔ diagrama —
+ * decide qual dos outros dois está "ativo"), `mapSettings` e
  * `flowSettings` — cada blob salvo separado em localStorage, sem se
- * misturar.
+ * misturar. `diagramId` persiste sempre (mesmo padrão de `view` — pedido
+ * do usuário, 2026-09-13, estendido pra área de interesse em 2026-09-14:
+ * "essa alteração também deve ser salva no localStorage como preferência
+ * do usuário").
  */
 export function useSettings() {
+  const [diagramId, setDiagramIdState] = useState<string>(loadDiagramId);
   // `view` primeiro — os overrides de query de bf/bs/rf dependem de saber
   // qual view está ativa (pra decidir mapa ou diagrama).
   const [view, setViewState] = useState<AppView>(() => {
@@ -242,6 +270,11 @@ export function useSettings() {
     const query = loadQueryOverrides(loadView());
     return { ...stored, ...query.flow };
   });
+
+  const setDiagramId = useCallback((next: string) => {
+    setDiagramIdState(next);
+    persist(DIAGRAM_STORAGE_KEY, next);
+  }, []);
 
   const setView = useCallback((next: AppView) => {
     setViewState(next);
@@ -279,5 +312,14 @@ export function useSettings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { view, setView, mapSettings, setMapSetting, flowSettings, setFlowSetting };
+  return {
+    diagramId,
+    setDiagramId,
+    view,
+    setView,
+    mapSettings,
+    setMapSetting,
+    flowSettings,
+    setFlowSetting,
+  };
 }

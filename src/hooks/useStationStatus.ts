@@ -3,7 +3,7 @@ import type { StationSeries } from "@/api/measurements";
 import type { ReferenceThresholds } from "@/api/parameters";
 import { classifyLevel, type LevelClass } from "@/lib/classification";
 import { freshnessOf, type Freshness } from "@/lib/freshness";
-import { fluviometricStations, fluviometricIds } from "@/data/stations";
+import type { StationPoint } from "@/types/station";
 import { useMeasurements } from "@/hooks/useMeasurements";
 import { useParameters } from "@/hooks/useParameters";
 
@@ -19,23 +19,34 @@ export interface StationStatus {
 }
 
 /**
- * Estado atual de cada estação fluviométrica: série de medições + classificação
- * do nível. Fonte única — a cor da caixa no mapa e usos futuros (listas,
- * filtros, resumos) devem consumir daqui.
+ * Estado atual de cada estação: série de medições + classificação do
+ * nível. Fonte única — a cor da caixa no mapa/diagrama e usos futuros
+ * (listas, filtros, resumos) devem consumir daqui.
+ *
+ * `stations`/`stationIds` são escopados pela ÁREA DE INTERESSE ativa
+ * (2026-09-14) — vêm de `REGION_STATIONS`/`REGION_STATION_IDS`
+ * (`data/stations.ts`), repassados como props desde `App.tsx` até quem
+ * chama esse hook (`StationsLayer`/`FlowView`). `stationIds` precisa ser
+ * referência ESTÁVEL (ver comentário em `useMeasurements`) — os arrays de
+ * `REGION_STATION_IDS` já são, computados 1x no load do módulo.
  *
  * `referenceDate` = null → "agora" (ao vivo); uma data fixa congela a janela
  * de 6h nesse instante (ver `useMeasurements`).
  */
-export function useStationStatus(referenceDate: Date | null = null) {
-  const measurements = useMeasurements(fluviometricIds, referenceDate);
-  const parameters = useParameters(fluviometricIds);
+export function useStationStatus(
+  stations: StationPoint[],
+  stationIds: number[],
+  referenceDate: Date | null = null,
+) {
+  const measurements = useMeasurements(stationIds, referenceDate);
+  const parameters = useParameters(stationIds);
 
   const byId = useMemo(() => {
     // "Agora" para fins de atraso: o instante sendo observado — real, em modo
     // ao vivo, ou a própria data de referência, ao navegar por um passado.
     const now = referenceDate ?? new Date();
     const map = new Map<number, StationStatus>();
-    for (const s of fluviometricStations) {
+    for (const s of stations) {
       const series = measurements.data?.get(s.id) ?? null;
       const thresholds = parameters.data?.get(s.id) ?? {};
       const classification =
@@ -45,7 +56,7 @@ export function useStationStatus(referenceDate: Date | null = null) {
       map.set(s.id, { stationId: s.id, classification, thresholds, series, freshness });
     }
     return map;
-  }, [measurements.data, parameters.data, referenceDate]);
+  }, [stations, measurements.data, parameters.data, referenceDate]);
 
   return {
     byId,

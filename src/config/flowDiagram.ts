@@ -28,48 +28,68 @@
  *
  * Cobre as 21 fluviométricas atuais (mesmo escopo do mapa). Sem estação nova
  * aparecer nessa lista, ela não é desenhada no fluxo (fica só no mapa).
+ *
+ * Bacia do Tietê/Pinheiros — desde 2026-09-14 uma de duas (ver também
+ * `flowDiagramRibeira.ts` e o pacote comum de tipos em `flowShared.ts`).
  */
 
-export interface FlowStationPosition {
-  stationId: number;
-  x: number;
-  y: number;
-}
+import type {
+  FlowBarragePosition,
+  FlowJunction,
+  FlowPipe,
+  FlowRiverLabel,
+  FlowStationPosition,
+} from "./flowShared";
+import { endpointNodeId } from "./flowShared";
+import type { FlowDiagramConfig } from "./flowShared";
+export { endpointNodeId };
 
 const TRUNK_Y = 400;
 /** Quanto a caixa flutua acima/abaixo (tronco) ou dos lados (afluente
  * vertical) do cano — zigue-zague pra não encavalar caixas vizinhas. */
 const OFF = 90;
 
-// ---- Tronco do Rio Tietê: 13 pontos no cano, oeste=jusante → leste=montante.
-//      Espaçamento uniforme (170px) exceto nos pares de barragem (Móvel:
-//      índices 1-2; Penha: índices 5-6), bem mais próximos entre si — é
-//      onde a barragem física fica; e o índice 7 (São Miguel, prefixo 508),
-//      puxado mais pra direita (perto do Jardim Helena, índice 8) a pedido
+// ---- Tronco do Rio Tietê: 15 pontos no cano, oeste=jusante → leste=montante.
+//      Espaçamento uniforme (170px) exceto: nos pares de barragem (Móvel:
+//      índices 3-4; Penha: índices 7-8), bem mais próximos entre si — é
+//      onde a barragem física fica; o índice 9 (São Miguel, prefixo 508),
+//      puxado mais pra direita (perto do Jardim Helena, índice 10) a pedido
 //      do usuário (2026-09-13) — mantém a ordem (ainda antes do Jardim
-//      Helena, que é mais a leste de verdade: -46.4158 vs -46.4231). ----
-const TRUNK_X = [0, 170, 270, 440, 610, 780, 880, 1150, 1220, 1390, 1560, 1730, 1900];
+//      Helena, que é mais a leste de verdade: -46.4158 vs -46.4231); e o
+//      trecho final (Itaim Biacica → Mogi das Cruzes, índices 11-14),
+//      comprimido pra 130px (era 170px) a pedido do usuário (2026-09-14:
+//      "o lado direito do diagrama hoje tem bastante sobrando") — ver nota
+//      em `FLOW_JUNCTIONS` sobre Tujuco Preto acompanhando essa compressão.
+//      Índices 0-1 são as 2 estações novas mais a jusante (2026-09-14,
+//      pedido do usuário: "coloquei mais duas estações que seguem o tietê
+//      a jusante"), sem posto real medido entre elas e Santana de
+//      Parnaíba/Guarda Municipal — mesmo passo padrão de 170px. ----
+const TRUNK_X = [
+  -340, -170, 0, 120, 150, 300, 610, 810, 850, 1150, 1220, 1350, 1480, 1610, 1740,
+];
 const TRUNK_STATION_IDS = [
-  33673, // 0 Santana de Parnaíba
-  // 1-2: Montante (upstream) fica ANTES da barragem no sentido do fluxo —
+  33671, // 0 Pirapora do Bom Jesus (Barragem Montante) — mais a jusante de todos
+  33673, // 2 Santana de Parnaíba (Guarda Municipal)
+  929, // 1 Santana de Parnaíba (Estação Edgar de Souza Montante)
+  // 3-4: Montante (upstream) fica ANTES da barragem no sentido do fluxo —
   // como o Tietê corre pra oeste (esquerda) nesse trecho, "antes" = mais a
   // LESTE (índice mais alto) e "depois" (Jusante) = mais a OESTE (índice
   // mais baixo). Bate com a lat/lng real das duas estações (Montante,
   // -46.75083, fica a leste de Jusante, -46.75267). Uma correção anterior
   // (2026-09-12, mesmo dia) tinha invertido isso por engano, achando que o
   // nome "Montante" seria enganoso — não era; usuário corrigiu de volta.
-  33698, // 1 Barragem Móvel Jusante (Cebolão) — depois da barragem, mais a oeste
-  33720, // 2 Barragem Móvel Montante — antes da barragem, mais a leste
-  33758, // 3 Ponte do Piqueri
-  33741, // 4 Ponte Dutra
-  33762, // 5 Barragem da Penha Jusante
-  33675, // 6 Barragem da Penha Montante
-  33771, // 7 São Miguel
-  35335, // 8 Núcleo Jardim Helena
-  35320, // 9 Núcleo Itaim Biacica
-  33212, // 10 Jardim Romano
-  35423, // 11 Itaquaquecetuba
-  33209, // 12 Mogi das Cruzes (Estaleiro)
+  33698, // 3 Barragem Móvel Jusante (Cebolão) — depois da barragem, mais a oeste
+  33720, // 4 Barragem Móvel Montante — antes da barragem, mais a leste
+  33758, // 5 Ponte do Piqueri
+  33741, // 6 Ponte Dutra
+  33762, // 7 Barragem da Penha Jusante
+  33675, // 8 Barragem da Penha Montante
+  33771, // 9 São Miguel
+  35335, // 10 Núcleo Jardim Helena
+  35320, // 11 Núcleo Itaim Biacica
+  33212, // 12 Jardim Romano
+  35423, // 13 Itaquaquecetuba
+  33209, // 14 Mogi das Cruzes (Estaleiro)
 ];
 
 const trunkJunctionId = (i: number) => `j-trunk-${i}`;
@@ -116,19 +136,13 @@ export const FLOW_POSITION_BY_STATION_ID = new Map(
  * confluências. Postos nunca são um desses pontos; sempre flutuam ao lado,
  * ligados por um leader.
  */
-export interface FlowJunction {
-  id: string;
-  x: number;
-  y: number;
-}
-
 export const FLOW_JUNCTIONS: FlowJunction[] = [
   ...TRUNK_X.map((x, i) => ({ id: trunkJunctionId(i), x, y: TRUNK_Y })),
-  { id: "j-pinheiros-0", x: 245, y: TRUNK_Y }, // confluência Pinheiros × Tietê
-  { id: "j-pinheiros-1", x: 245, y: 600 }, // altura do Retiro
-  { id: "j-pinheiros-2", x: 245, y: 800 }, // altura da Traição (os 2 leaders saem daqui)
-  { id: "j-pinheiros-3", x: 245, y: 1000 }, // altura de Ponte João Dias
-  { id: "j-pinheiros-4", x: 245, y: 1200 }, // altura de Pedreira, fim do cano
+  { id: "j-pinheiros-0", x: 160, y: TRUNK_Y }, // confluência Pinheiros × Tietê
+  { id: "j-pinheiros-1", x: 160, y: 600 }, // altura do Retiro
+  { id: "j-pinheiros-2", x: 160, y: 800 }, // altura da Traição (os 2 leaders saem daqui)
+  { id: "j-pinheiros-3", x: 160, y: 1000 }, // altura de Ponte João Dias
+  { id: "j-pinheiros-4", x: 160, y: 1200 }, // altura de Pedreira, fim do cano
   { id: "j-tamanduatei-0", x: 555, y: TRUNK_Y }, // confluência Tamanduateí × Tietê
   { id: "j-tamanduatei-1", x: 555, y: 500 }, // altura do posto — continua perto da foz
   { id: "j-tamanduatei-2", x: 555, y: 720 }, // cano continua (só visual) — dá espaço pro nome do rio
@@ -146,39 +160,21 @@ export const FLOW_JUNCTIONS: FlowJunction[] = [
   //      (print do usuário, 2026-09-12): Aricanduva e Tiquatira ficam entre
   //      Ponte Dutra e a Barragem da Penha (não depois dela); Itaquera fica
   //      a jusante de São Miguel (mais perto do Jacú); Tujuco Preto bem
-  //      mais a leste. ----
+  //      mais a leste. Tujuco Preto puxado de 1470→1415 (2026-09-14, pedido
+  //      do usuário: "distância entre o rio itaquera e o cor tijuco preto
+  //      pode diminuir... mesma coisa do cor tijuco preto pro fim a
+  //      montante") — acompanha a compressão do trecho final do tronco
+  //      (Itaim Biacica→Mogi das Cruzes, ver `TRUNK_X`), continua entre
+  //      seus vizinhos reais (Itaim Biacica=1350, Jardim Romano=1480). ----
   { id: "j-aricanduva-0", x: 660, y: TRUNK_Y }, // confluência (entre Ponte Dutra e a Penha)
   { id: "j-aricanduva-1", x: 660, y: TRUNK_Y + 400 },
   { id: "j-tiquatira-0", x: 720, y: TRUNK_Y }, // confluência (entre Aricanduva e a Penha)
   { id: "j-tiquatira-1", x: 720, y: TRUNK_Y + 400 },
   { id: "j-itaquera-0", x: 1035, y: TRUNK_Y }, // confluência (entre Jacú e São Miguel — a jusante de São Miguel)
   { id: "j-itaquera-1", x: 1035, y: TRUNK_Y + 400 },
-  { id: "j-tujucopreto-0", x: 1470, y: TRUNK_Y }, // confluência (bem mais a leste)
-  { id: "j-tujucopreto-1", x: 1470, y: TRUNK_Y + 400 },
+  { id: "j-tujucopreto-0", x: 1415, y: TRUNK_Y }, // confluência (leste, mas comprimida — ver nota acima)
+  { id: "j-tujucopreto-1", x: 1415, y: TRUNK_Y + 400 },
 ];
-
-/** Extremo de uma pipe/leader: id de posto (número) ou de junção (string). */
-export type FlowEndpoint = number | string;
-
-export function endpointNodeId(e: FlowEndpoint): string {
-  return typeof e === "number" ? String(e) : e;
-}
-
-export interface FlowPipe {
-  id: string;
-  from: FlowEndpoint;
-  to: FlowEndpoint;
-  river:
-    | "tiete"
-    | "pinheiros"
-    | "tamanduatei"
-    | "jacu"
-    | "baquirivu"
-    | "aricanduva"
-    | "tiquatira"
-    | "itaquera"
-    | "tujucopreto";
-}
 
 /**
  * Segmentos do "cano" — linhas grossas representando o curso d'água, sempre
@@ -186,8 +182,11 @@ export interface FlowPipe {
  * entra em ângulo reto no tronco, sem curva, como no `example.png`.
  */
 export const FLOW_PIPES: FlowPipe[] = [
-  // Tronco do Tietê — 12 segmentos entre os 13 pontos, em sequência.
-  ...Array.from({ length: 12 }, (_, i) => ({
+  // Tronco do Tietê — um segmento entre cada par de pontos consecutivos
+  // (`TRUNK_X.length - 1`, não mais um número fixo — travava em "12" e
+  // silenciosamente sumia com os 2 pontos novos de 2026-09-14 até virar
+  // bug real; agora deriva do próprio array, nunca mais desalinha).
+  ...Array.from({ length: TRUNK_X.length - 1 }, (_, i) => ({
     id: `p-tiete-${i}`,
     from: trunkJunctionId(i),
     to: trunkJunctionId(i + 1),
@@ -247,17 +246,6 @@ export const FLOW_LEADERS: FlowPipe[] = [
   { id: "l-baquirivu", from: "j-baquirivu-1", to: 35285, river: "baquirivu" },
 ];
 
-/** Rótulo (nome do rio) fixado num ponto do cano, com o ângulo de leitura. */
-export interface FlowRiverLabel {
-  id: string;
-  text: string;
-  x: number;
-  y: number;
-  /** Graus de rotação do texto — 0 = horizontal (tronco), 90/-90 = ao longo
-   * de um afluente vertical. */
-  angle: number;
-}
-
 /** Distância (px, centro-a-centro) do rótulo até o próprio cano — fora da
  * linha, não mais em cima dela (pedido do usuário, 2026-09-12: "remove de
  * dentro do curso e coloca do lado"). Regra: linha vertical → rótulo à
@@ -274,8 +262,8 @@ const LABEL_OFFSET = 16;
 
 export const FLOW_RIVER_LABELS: FlowRiverLabel[] = [
   { id: "lbl-tiete-0", text: "RIO TIETÊ", x: 500, y: TRUNK_Y - LABEL_OFFSET, angle: 0 },
-  { id: "lbl-tiete-1", text: "RIO TIETÊ", x: 1560, y: TRUNK_Y - LABEL_OFFSET, angle: 0 },
-  { id: "lbl-pinheiros", text: "RIO PINHEIROS", x: 245 - LABEL_OFFSET, y: 900, angle: -90 },
+  { id: "lbl-tiete-1", text: "RIO TIETÊ", x: 1480, y: TRUNK_Y - LABEL_OFFSET, angle: 0 }, // acompanha Jardim Romano (comprimido, 2026-09-14)
+  { id: "lbl-pinheiros", text: "RIO PINHEIROS", x: 160 - LABEL_OFFSET, y: 900, angle: -90 },
   { id: "lbl-tamanduatei", text: "RIO TAMANDUATEÍ", x: 555 - LABEL_OFFSET, y: 580, angle: -90 },
   { id: "lbl-jacu", text: "CÓRREGO JACÚ", x: 1017 - LABEL_OFFSET, y: 500, angle: -90 },
   // Exceção: fica à DIREITA do cano (pedido do usuário, 2026-09-13) — os
@@ -291,7 +279,7 @@ export const FLOW_RIVER_LABELS: FlowRiverLabel[] = [
   // Exceção: Itaquera vai pra DIREITA (ver nota acima) — evita colidir com
   // o Jacú, que fica só 18px à esquerda dele (x=1017).
   { id: "lbl-itaquera", text: "RIO ITAQUERA", x: 1035 + LABEL_OFFSET, y: 600, angle: -90 },
-  { id: "lbl-tujucopreto", text: "CÓR. TUJUCO PRETO", x: 1470 - LABEL_OFFSET, y: 600, angle: -90 },
+  { id: "lbl-tujucopreto", text: "CÓR. TUJUCO PRETO", x: 1415 - LABEL_OFFSET, y: 600, angle: -90 },
 ];
 
 /** Posição de cada barragem no esquema (só existem no fluxo — não têm
@@ -299,14 +287,8 @@ export const FLOW_RIVER_LABELS: FlowRiverLabel[] = [
  * próprio tronco, na "boca" entre os dois postos Montante/Jusante daquela
  * estrutura — mesmo x do ponto médio entre eles (levemente deslocada da
  * junção do Pinheiros, no caso da Móvel, pra não empilhar em cima dela). */
-export interface FlowBarragePosition {
-  barrageId: string;
-  x: number;
-  y: number;
-}
-
 export const FLOW_BARRAGE_POSITIONS: FlowBarragePosition[] = [
-  { barrageId: "barragem-movel", x: 210, y: TRUNK_Y }, // entre os postos de Barragem Móvel (x=170/270)
+  { barrageId: "barragem-movel", x: 135, y: TRUNK_Y }, // entre os postos de Barragem Móvel (x=170/270)
   { barrageId: "barragem-penha", x: 830, y: TRUNK_Y }, // entre os postos de Barragem da Penha (x=780/880)
 ];
 
@@ -316,13 +298,30 @@ export const FLOW_BARRAGE_POSITION_BY_ID = new Map(
 
 /** Logo da SP Águas, como elemento do próprio diagrama (pedido do usuário,
  * 2026-09-13) — centralizado embaixo dos afluentes do Tietê. `x` = meio do
- * tronco (0 a 1900); `y` ajustado a partir de um print que o usuário
- * marcou com a área desejada (a 1ª posição, y=1320, tinha ficado um pouco
- * abaixo do que ele queria). */
-export const FLOW_LOGO_POSITION = { x: 950, y: 1030 };
+ * tronco; `y` ajustado a partir de um print que o usuário marcou com a
+ * área desejada (a 1ª posição, y=1320, tinha ficado um pouco abaixo do que
+ * ele queria). `x` recalculado (950→700) em 2026-09-14, quando o tronco
+ * ganhou 2 estações a jusante e o trecho final foi comprimido — novo meio
+ * do tronco é (-340 a 1740)/2 = 700 (era 0 a 1900 antes). */
+export const FLOW_LOGO_POSITION = { x: 700, y: 1030 };
 
 /** Logo do SIBH, embaixo da SP Águas (pedido do usuário, 2026-09-13 — o
  * print não carrega a navbar, então sem isso a imagem exportada não tem
  * referência explícita ao SIBH). Mesmo `x`; `y` = abaixo da SP Águas
  * (centro 1030 + metade da altura dela, 119/2 ≈ 60) + ~20px de respiro. */
-export const FLOW_SIBH_LOGO_POSITION = { x: 950, y: 1135 };
+export const FLOW_SIBH_LOGO_POSITION = { x: 700, y: 1135 };
+
+/** Pacote completo — o que `FlowView.tsx` consome via `config/flowDiagrams.ts`
+ * (registro por `Region`). Ver `flowShared.ts` pro shape. */
+export const TIETE_FLOW_DIAGRAM: FlowDiagramConfig = {
+  FLOW_STATION_POSITIONS,
+  FLOW_POSITION_BY_STATION_ID,
+  FLOW_JUNCTIONS,
+  FLOW_PIPES,
+  FLOW_LEADERS,
+  FLOW_RIVER_LABELS,
+  FLOW_BARRAGE_POSITIONS,
+  FLOW_BARRAGE_POSITION_BY_ID,
+  FLOW_LOGO_POSITION,
+  FLOW_SIBH_LOGO_POSITION,
+};

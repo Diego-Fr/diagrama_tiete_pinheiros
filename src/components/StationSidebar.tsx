@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { stationsById } from "@/data/stations";
 import { useStationStatus } from "@/hooks/useStationStatus";
 import { LEVEL_LABELS } from "@/lib/classification";
@@ -35,12 +35,16 @@ export default function StationSidebar({
   onClose,
   onExpand,
 }: StationSidebarProps) {
-  const { byId } = useStationStatus(referenceDate);
+  // Lookup é global (id é único entre bacias, ver `data/stations.ts`) — só
+  // busca status DESSE posto (não da área de interesse inteira), estável
+  // por `useMemo` pra não recriar a queryKey a cada render (2026-09-14).
+  const station = stationId != null ? stationsById.get(stationId) : undefined;
+  const statusStations = useMemo(() => (station ? [station] : []), [station]);
+  const statusIds = useMemo(() => (station ? [station.id] : []), [station]);
+  const { byId } = useStationStatus(statusStations, statusIds, referenceDate);
   const [viewMode, setViewMode] = useState<ViewMode>("chart");
 
-  if (stationId == null) return null;
-  const station = stationsById.get(stationId);
-  if (!station) return null;
+  if (stationId == null || !station) return null;
 
   const status = byId.get(stationId);
   const series = status?.series ?? null;

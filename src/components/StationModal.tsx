@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { GroupType } from "@/api/measurements";
 import { stationsById } from "@/data/stations";
 import { useStationHistory } from "@/hooks/useStationHistory";
@@ -31,7 +31,13 @@ export default function StationModal({ stationId, onClose }: StationModalProps) 
   });
 
   const [viewMode, setViewMode] = useState<ViewMode>("chart");
-  const { byId } = useStationStatus();
+  // Lookup é global (id é único entre bacias) — só busca status DESSE posto
+  // (só usado aqui pros `thresholds`; a série vem de `useStationHistory`
+  // abaixo, com a janela própria do modal) — 2026-09-14.
+  const station = stationsById.get(stationId);
+  const statusStations = useMemo(() => (station ? [station] : []), [station]);
+  const statusIds = useMemo(() => (station ? [station.id] : []), [station]);
+  const { byId } = useStationStatus(statusStations, statusIds);
   const history = useStationHistory(
     stationId,
     range.start.toISOString(),
@@ -47,7 +53,6 @@ export default function StationModal({ stationId, onClose }: StationModalProps) 
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const station = stationsById.get(stationId);
   if (!station) return null;
 
   const series = history.data?.get(stationId) ?? null;

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { fluviometricIds } from "@/data/stations";
 import {
   MEASUREMENTS_REFRESH_MS,
   useMeasurements,
@@ -8,6 +7,10 @@ import {
 interface RefreshBarProps {
   /** null = agora (ao vivo). Só faz sentido mostrar o contador nesse modo. */
   referenceDate: Date | null;
+  /** Ids da área de interesse ativa (`REGION_STATION_IDS[region]`) — o
+   * refresh é só dos postos realmente exibidos (2026-09-14, feature de
+   * múltiplas áreas de interesse). */
+  stationIds: number[];
 }
 
 /**
@@ -16,9 +19,9 @@ interface RefreshBarProps {
  * `parameters` não recarrega — são valores estáticos. Some quando o usuário
  * está vendo uma data fixa no passado (não há "próximo refresh").
  */
-export default function RefreshBar({ referenceDate }: RefreshBarProps) {
+export default function RefreshBar({ referenceDate, stationIds }: RefreshBarProps) {
   const isLive = referenceDate == null;
-  const { dataUpdatedAt } = useMeasurements(fluviometricIds, referenceDate);
+  const { dataUpdatedAt } = useMeasurements(stationIds, referenceDate);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
