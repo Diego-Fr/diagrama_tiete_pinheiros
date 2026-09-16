@@ -6,7 +6,7 @@ import { useStationStatus } from "@/hooks/useStationStatus";
 import { LEVEL_LABELS } from "@/lib/classification";
 import { formatDateTimeBR, formatFullDateTimeBR } from "@/lib/datetime";
 import { FRESHNESS_LABELS } from "@/lib/freshness";
-import { buildJusanteChartSeries, formatFlow } from "@/lib/stationFormat";
+import { buildFlowChartSeries, buildJusanteChartSeries, formatFlow } from "@/lib/stationFormat";
 import type { Trend } from "@/lib/trendIcons";
 import LevelChart from "@/components/LevelChart";
 import ReadingsTable from "@/components/ReadingsTable";
@@ -81,11 +81,16 @@ export default function StationSidebar({
     station.jusanteStationId != null
       ? (jusanteData?.get(station.jusanteStationId) ?? null)
       : null;
-  const jusanteChart = buildJusanteChartSeries(jusanteSeries);
-  // Vazão (2026-09-15, regra restrita à jusante de reservatório) — só
-  // quando a ÚLTIMA leitura da jusante tem `read_value` preenchido pela
-  // API (`Reading.flow`).
-  const jusanteFlow = jusanteSeries?.last.flow ?? null;
+  // 2ª linha do gráfico (2026-09-15) — prefere a jusante da UHE quando
+  // existe (`jusanteSeries`, série auxiliar de OUTRO posto); senão, cai
+  // pra vazão do PRÓPRIO posto selecionado, se a API preencheu
+  // `read_value` nele (pedido do usuário: "qualquer posto flu, com
+  // read_value tem vazao... no click da caixa e no modal, exibir a vazao
+  // em eixo contrario" — generaliza o que antes só valia pra jusante).
+  const secondaryChart = buildJusanteChartSeries(jusanteSeries) ?? buildFlowChartSeries(series);
+  // Linha "Vazão: X m³/s" no cabeçalho — mesma prioridade acima (jusante
+  // primeiro, senão a vazão do próprio posto).
+  const flowValue = jusanteSeries?.last.flow ?? series?.last.flow ?? null;
   // Prefixo da API (correto) quando disponível; só cai pro estático
   // (`station.prefix`, que tem registros corrompidos — ver `stations.ts`)
   // se a janela consultada não trouxe nenhuma leitura ainda.
@@ -151,11 +156,10 @@ export default function StationSidebar({
           )}
         </p>
       )}
-      {/* Vazão de jusante (2026-09-15) — só quando a API preenche
-          `read_value` pra essa jusante (regra restrita a jusante de
-          reservatório, pedido do usuário). */}
-      {jusanteFlow != null && (
-        <p className="station-sidebar__time">Vazão: {formatFlow(jusanteFlow)} m³/s</p>
+      {/* Vazão (2026-09-15) — jusante da UHE ou do próprio posto, só
+          quando a API preenche `read_value` (`Reading.flow`). */}
+      {flowValue != null && (
+        <p className="station-sidebar__time">Vazão: {formatFlow(flowValue)} m³/s</p>
       )}
 
       <div className="station-sidebar__chart-head">
@@ -168,7 +172,7 @@ export default function StationSidebar({
             <LevelChart
               readings={series.readings}
               thresholds={status?.thresholds ?? {}}
-              jusante={jusanteChart}
+              secondary={secondaryChart}
             />
           ) : (
             <ReadingsTable readings={series.readings} />

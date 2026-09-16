@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import MapView from "@/components/MapView";
 import FlowView from "@/components/FlowView";
 import AppNavbar from "@/components/AppNavbar";
@@ -19,13 +19,14 @@ import { FLOW_DIAGRAMS } from "@/config/flowDiagrams";
 import { barrages as TIETE_BARRAGES } from "@/data/barrages";
 import { REGION_STATIONS, REGION_STATION_IDS } from "@/data/stations";
 import { BOX_SIZE_SCALE } from "@/lib/boxFormat";
-import type { LevelClass } from "@/lib/classification";
+import { LEVEL_ORDER, type LevelClass } from "@/lib/classification";
 import { formatFileStampBR } from "@/lib/datetime";
 import { downloadElementAsPng } from "@/lib/mapSnapshot";
 import { useAuth } from "@/hooks/useAuth";
 import { useSettings } from "@/hooks/useSettings";
 import { useFlowStationPositions } from "@/hooks/useFlowStationPositions";
 import { useStationPositions } from "@/hooks/useStationPositions";
+import { useStationStatus } from "@/hooks/useStationStatus";
 
 /** Sem barragem monitorada conhecida fora do Tietê/Pinheiros — array vazio
  * pras demais bacias (2026-09-14, feature de múltiplas áreas de interesse). */
@@ -112,6 +113,29 @@ export default function App() {
       return next;
     });
   }, []);
+
+  // Contagem de postos por status na legenda (2026-09-16, pedido do
+  // usuário: "na legenda, indique quantos postos existem com cada
+  // status") — MESMA `activeStations`/`activeStationIds`/`referenceDate`
+  // que `MapView`/`FlowView` já passam pra baixo, então bate a mesma
+  // queryKey do React Query (sem request nova, só mais um lugar lendo o
+  // cache já buscado — mesmo raciocínio já aplicado em
+  // `StationSidebar`/`BarrageSidebar` nesta sessão). Conta TODOS os
+  // postos carregados, independente de `hiddenLevels` (a legenda mostra
+  // o total real, não o que está visível no momento).
+  const { byId: statusById } = useStationStatus(
+    activeStations,
+    activeStationIds,
+    referenceDate,
+  );
+  const levelCounts = useMemo(() => {
+    const counts = Object.fromEntries(LEVEL_ORDER.map((l) => [l, 0])) as Record<
+      LevelClass,
+      number
+    >;
+    for (const status of statusById.values()) counts[status.classification]++;
+    return counts;
+  }, [statusById]);
 
   const closeStation = () => {
     setModalOpen(false);
@@ -264,6 +288,7 @@ export default function App() {
           hidden={hiddenLevels}
           onHover={setHoveredLevel}
           onToggle={toggleLevel}
+          counts={levelCounts}
           showBarrageItem={view === "flow" && activeBarrages.length > 0}
         />
 

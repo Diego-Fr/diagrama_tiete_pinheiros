@@ -94,37 +94,59 @@ const TRUNK_STATION_IDS = [
 
 const trunkJunctionId = (i: number) => `j-trunk-${i}`;
 
+/**
+ * **13 das 23 posições viraram o DEFAULT (2026-09-16)** — mesmo pedido já
+ * feito pro Ribeira ("olhe como esta disposto as posições das caixas...
+ * quero q vc deixe essas posições como default"), agora pro Tietê/
+ * Pinheiros. O usuário colou o JSON de
+ * `localStorage["diagrama-tiete:flow-station-positions"]` (chave ÚNICA,
+ * compartilhada entre as duas bacias — 2 ids do JSON, 29791/33203, eram
+ * overrides da RIBEIRA que sobraram na mesma chave, filtrados/ignorados
+ * aqui). Os 13 ids abaixo com override viraram coordenadas CURADAS fixas
+ * (coladas literalmente do JSON, arredondadas a 2 casas); os outros 10
+ * (sem override — o usuário não tinha arrastado esses) mantiveram o
+ * valor que a fórmula original já dava (`TRUNK_X[i]`/`TRUNK_Y±OFF` pro
+ * tronco, ou o literal que já existia pros 3 de fora do tronco), só que
+ * agora também hardcoded — a lista toda parou de depender do `.map`
+ * sobre `TRUNK_STATION_IDS` aqui (esse array/`TRUNK_X` continuam em uso
+ * noutros lugares: `FLOW_JUNCTIONS` gera as junções do cano,
+ * `FLOW_LEADERS` gera os leaders — nenhum dos dois usa posição, só
+ * id/índice).
+ */
 export const FLOW_STATION_POSITIONS: FlowStationPosition[] = [
-  // Tronco — zigue-zague acima/abaixo do cano.
-  ...TRUNK_STATION_IDS.map((stationId, i) => ({
-    stationId,
-    x: TRUNK_X[i]!,
-    y: TRUNK_Y + (i % 2 === 0 ? -OFF : OFF),
-  })),
+  // ---- Tronco (6 dos 15 arrastados; os outros 9 mantêm o valor que a
+  //      fórmula `TRUNK_X[i]`/`TRUNK_Y±OFF` já dava) ----
+  { stationId: 33671, x: -376.65, y: 260.6 }, // Pirapora do Bom Jesus (Barragem Montante)
+  { stationId: 33673, x: -286.33, y: 491.59 }, // Santana de Parnaíba (Guarda Municipal)
+  { stationId: 929, x: -52.59, y: 263.79 }, // Santana de Parnaíba (Edgar de Souza Montante)
+  { stationId: 33698, x: 11.64, y: 494.78 }, // Barragem Móvel Jusante (Cebolão)
+  { stationId: 33720, x: 280.68, y: 263.79 }, // Barragem Móvel Montante
+  { stationId: 33758, x: 300, y: 490 }, // Ponte do Piqueri — sem override
+  { stationId: 33741, x: 563.79, y: 281.32 }, // Ponte Dutra
+  { stationId: 33762, x: 810, y: 490 }, // Barragem da Penha Jusante — sem override
+  { stationId: 33675, x: 850, y: 310 }, // Barragem da Penha Montante — sem override
+  { stationId: 33771, x: 1188.25, y: 638.2 }, // São Miguel
+  { stationId: 35335, x: 1220, y: 310 }, // Núcleo Jardim Helena — sem override
+  { stationId: 35320, x: 1329.28, y: 504.34 }, // Núcleo Itaim Biacica
+  { stationId: 33212, x: 1480, y: 310 }, // Jardim Romano — sem override
+  { stationId: 35423, x: 1610, y: 490 }, // Itaquaquecetuba — sem override
+  { stationId: 33209, x: 1740, y: 310 }, // Mogi das Cruzes (Estaleiro) — sem override
 
-  // ---- Rio Pinheiros (5 postos) — ao sul do tronco, confluência a 245
-  //      (perto da Barragem Móvel, x=170/270 — ela fica bem aí de verdade) ----
-  { stationId: 92, x: 245 + OFF, y: 600 }, // Estrutura de Retiro (perto da confluência)
-  { stationId: 114, x: 245 - 110, y: 800 }, // Superior — Usina Elevatória Traição
-  { stationId: 109, x: 245 + 110, y: 800 }, // Inferior — Usina Elevatória Traição
-  { stationId: 868, x: 245 - OFF, y: 1000 }, // Ponte João Dias
-  { stationId: 117, x: 245 + OFF, y: 1200 }, // Pedreira, mais a montante
+  // ---- Rio Pinheiros (5 postos; 2 arrastados) ----
+  { stationId: 92, x: 245 + OFF, y: 600 }, // Estrutura de Retiro — sem override
+  { stationId: 114, x: -62.61, y: 806.37 }, // Superior — Usina Elevatória Traição
+  { stationId: 109, x: 245 + 110, y: 800 }, // Inferior — Usina Elevatória Traição — sem override
+  { stationId: 868, x: -9.14, y: 1007.97 }, // Ponte João Dias
+  { stationId: 117, x: 245 + OFF, y: 1200 }, // Pedreira — sem override
 
-  // ---- Rio Tamanduateí (1 posto) — confluência a 555 (entre Ponte do
-  //      Piqueri e Ponte Dutra); ramal CURTO — posto fica perto da
-  //      confluência de verdade ----
-  { stationId: 33767, x: 555 + OFF, y: 500 }, // Mercado Municipal
+  // ---- Rio Tamanduateí (1 posto, arrastado) ----
+  { stationId: 33767, x: 571.69, y: 696.01 }, // Mercado Municipal
 
-  // ---- Córrego Jacú (1 posto) — confluência a 1017 (entre Barragem da
-  //      Penha Montante e São Miguel, mais perto da Penha). Deslocado pra
-  //      ESQUERDA (não direita) — pra direita cruzaria o afluente do
-  //      Itaquera, que passa logo ali (x=1035). ----
-  { stationId: 33722, x: 1017 - OFF, y: 600 }, // Jd. Pantanal
+  // ---- Córrego Jacú (1 posto, arrastado) ----
+  { stationId: 33722, x: 856.88, y: 606.37 }, // Jd. Pantanal
 
-  // ---- Rio Baquirivu (1 posto) — ao NORTE do tronco, confluência a 948
-  //      (entre Barragem da Penha Montante e São Miguel, mais perto de
-  //      São Miguel — lado oposto ao Jacú) ----
-  { stationId: 35285, x: 948 - OFF, y: 200 }, // CECAP
+  // ---- Rio Baquirivu (1 posto, arrastado) ----
+  { stationId: 35285, x: 765.57, y: 155.38 }, // CECAP
 ];
 
 export const FLOW_POSITION_BY_STATION_ID = new Map(

@@ -168,54 +168,59 @@ const TRUNK_STATIONS: { index: number; stationId: number; side?: "above" | "belo
 
 const trunkJunctionId = (i: number) => `j-trunk-${i}`;
 
+/**
+ * **Posições viraram o DEFAULT (2026-09-16)** — pedido do usuário: "olhe
+ * como esta disposto as posições das caixas do meu diagrama do ribeira,
+ * quero q vc deixe essas posições como default". O usuário tinha
+ * arrastado praticamente todas as caixas (persistido em
+ * `localStorage["diagrama-tiete:flow-station-positions"]`, só no
+ * navegador dele — não dá pra eu ler direto, ele colou o JSON na
+ * conversa) — as coordenadas abaixo são uma cópia EXATA desse JSON pros
+ * 15 postos que ele tinha mesmo arrastado (de 16 — só "Pariquera-Açu",
+ * id 1176, não tinha override, continua na posição calculada de sempre
+ * via `TRUNK_X`/zigue-zague). A partir de agora essas são posições
+ * CURADAS (fixas, hardcoded) — não mais calculadas por fórmula
+ * (`TRUNK_X[index]±OFF`, `jguacuBarrageX(i)` etc.) — os 5 postos do
+ * tronco e os 8 da UHE deixaram de usar as fórmulas originais aqui
+ * (as fórmulas continuam existindo/em uso noutros lugares: `TRUNK_X`
+ * ainda gera as junções do cano em `FLOW_JUNCTIONS`, `TRUNK_STATIONS`
+ * ainda gera os leaders em `FLOW_LEADERS`, `jguacuBarrageX` ainda
+ * posiciona os ÍCONES de barragem em `FLOW_SIMPLE_BARRAGES`/os pontos
+ * de junção `j-uhe-*` — só a posição da CAIXA do posto mudou de
+ * "calculada" pra "arrastada pelo usuário e fixada aqui").
+ */
 export const FLOW_STATION_POSITIONS: FlowStationPosition[] = [
-  ...TRUNK_STATIONS.map(({ index, stationId, side }, pos) => {
-    const above = side ? side === "above" : pos % 2 === 0;
-    return {
-      stationId,
-      x: TRUNK_X[index]!,
-      y: TRUNK_Y + (above ? -OFF : OFF),
-    };
-  }),
+  // ---- Tronco (5 dos 6 arrastados; Pariquera-Açu/1176 sem override,
+  //      continua pela fórmula de sempre) ----
+  { stationId: 29794, x: -52, y: 281.89 }, // Ribeira (Ponte Divisa Estadual)
+  { stationId: 33203, x: 168.42, y: 492.88 }, // Iporanga (R. dos Expedicionários)
+  { stationId: 29791, x: 445.91, y: 494.32 }, // Eldorado (Av. Beira Rio)
+  { stationId: 29726, x: 802.64, y: 487.12 }, // Sete Barras (Banana)
+  { stationId: 26243, x: 1023.76, y: 300.82 }, // Registro (Av. Marginal Castelo Branco)
+  { stationId: 1176, x: TRUNK_X[5]!, y: TRUNK_Y + OFF }, // Pariquera-Açu — sem override, fórmula original
 
-  // Barra do Turvo (5F-010) — no pontinho de monitoramento do Rio Pardo
-  // (`j-pardo-dot`, x=220 y=678), não no tronco. Flutua pro lado OESTE
-  // (o lado leste, na mesma altura, já tem o próprio Rio Turvo passando).
-  { stationId: 30854, x: 220 - OFF, y: 678 },
+  // Barra do Turvo (5F-010) — arrastado.
+  { stationId: 30854, x: 23.5, y: 695.27 },
 
-  // Juquiá (Estrada do Pouso Alto, 4F-018) — na ponta de montante do Rio
-  // Juquiá-Guaçu (`j-juquiaguacu-1`, x=840 y=234), pedido do usuário
-  // (2026-09-15). Flutua pro lado LESTE (o rótulo "RIO JUQUIÁ-GUAÇU" já
-  // fica do lado oeste da linha).
-  { stationId: 29728, x: 840 + OFF, y: 234 },
+  // Juquiá (Estrada do Pouso Alto, 4F-018) — arrastado.
+  { stationId: 29728, x: 1010.17, y: 141.28 },
 
-  // ---- 8 postos de monitoramento das UHEs (2026-09-15, pedido do
-  //      usuário: "posicione cada caixa no meio de cada SVG de barragem
-  //      correspondente") — DIFERENTE de todos os outros postos desse
-  //      arquivo: aqui a caixa NÃO flutua ao lado, ela fica exatamente
-  //      em cima do ícone da UHE (mesmo x/y de `FLOW_SIMPLE_BARRAGES`).
-  //      MESMO assim têm entrada em `FLOW_LEADERS` (pedido do usuário:
-  //      "coloca a linha linkando") — com início/fim coincidindo (posto
-  //      e junção no mesmo ponto) a "bolinha" do leader fica embaixo da
-  //      caixa (SVG de edge sempre atrás dos nodes no React Flow), então
-  //      NÃO aparece na tela — o ganho real é deixar o posto formalmente
-  //      ligado ao cano no grafo (as 6 UHEs do meio viraram junções de
-  //      verdade, não só coordenadas soltas — ver `FLOW_JUNCTIONS`/
-  //      `FLOW_PIPES`). O ícone da barragem foi aumentado (48→90px,
-  //      `FlowView.tsx`) pra "parede"/água aparecerem ao redor da caixa
-  //      estreita — se "a linha linkando" pedida era outra coisa (não
-  //      esse elo formal no grafo), falta confirmar com o usuário. Nomes
-  //      cruzados com
-  //      `stations_ribeira.raw.json` pelo nome da UHE no próprio nome
-  //      do posto. ----
-  { stationId: 9508, x: jguacuBarrageX(1), y: 68 }, // Juquiá (PCH Serraria Barramento)
-  { stationId: 14437, x: jguacuBarrageX(2), y: 68 }, // Tapiraí (UHE Alecrim Barramento)
-  { stationId: 14473, x: jguacuBarrageX(3), y: 68 }, // Tapiraí (PCH Porto Raso Barramento)
-  { stationId: 14480, x: jguacuBarrageX(4), y: 68 }, // Tapiraí (UHE Barra Barramento)
-  { stationId: 14815, x: jguacuBarrageX(5), y: 68 }, // Ibiúna (UHE Fumaça Barramento)
-  { stationId: 14504, x: jguacuBarrageX(6), y: 68 }, // Juquitiba (UHE França Barramento)
-  { stationId: 14508, x: 477, y: 68 - 166 }, // Piedade (UHE Jurupara Barramento)
-  { stationId: 9545, x: 790, y: 68 - 166 }, // Juquiá (UHE Salto do Iporanga Barramento)
+  // ---- 8 postos de monitoramento das UHEs — todos arrastados (o
+  //      usuário afastou as caixas dos ícones de barragem, que
+  //      continuam nas posições de sempre — `FLOW_SIMPLE_BARRAGES`,
+  //      inalterado —, ligadas pelo leader que já existia,
+  //      `FLOW_LEADERS`/`l-uhe-*`, que agora passa a mostrar de verdade
+  //      a linha tracejada + bolinha, já que início/fim não coincidem
+  //      mais). Nomes cruzados com `stations_ribeira.raw.json` pelo nome
+  //      da UHE no próprio nome do posto (mesmo mapeamento de sempre). ----
+  { stationId: 9508, x: 747.5, y: 216.24 }, // Juquiá (PCH Serraria Barramento)
+  { stationId: 14437, x: 643.44, y: -97.69 }, // Tapiraí (UHE Alecrim Barramento)
+  { stationId: 14473, x: 563.09, y: 217.8 }, // Tapiraí (PCH Porto Raso Barramento)
+  { stationId: 14480, x: 360.11, y: 210.74 }, // Tapiraí (UHE Barra Barramento)
+  { stationId: 14815, x: 193.51, y: 197.95 }, // Ibiúna (UHE Fumaça Barramento)
+  { stationId: 14504, x: 98.5, y: -36.16 }, // Juquitiba (UHE França Barramento)
+  { stationId: 14508, x: 339.11, y: -182.84 }, // Piedade (UHE Jurupara Barramento)
+  { stationId: 9545, x: 919.93, y: -200.21 }, // Juquiá (UHE Salto do Iporanga Barramento)
 ];
 
 export const FLOW_POSITION_BY_STATION_ID = new Map(

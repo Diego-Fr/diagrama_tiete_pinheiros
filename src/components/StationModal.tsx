@@ -4,7 +4,7 @@ import { stationsById } from "@/data/stations";
 import type { StationPoint } from "@/types/station";
 import { useStationHistory } from "@/hooks/useStationHistory";
 import { useStationStatus } from "@/hooks/useStationStatus";
-import { buildJusanteChartSeries, formatFlow } from "@/lib/stationFormat";
+import { buildFlowChartSeries, buildJusanteChartSeries, formatFlow } from "@/lib/stationFormat";
 import DateRangeControl from "@/components/DateRangeControl";
 import LevelChart from "@/components/LevelChart";
 import ReadingsTable from "@/components/ReadingsTable";
@@ -82,8 +82,11 @@ export default function StationModal({
     station.jusanteStationId != null
       ? (jusanteHistory.data?.get(station.jusanteStationId) ?? null)
       : null;
-  const jusanteChart = buildJusanteChartSeries(jusanteSeries);
-  const jusanteFlow = jusanteSeries?.last.flow ?? null;
+  // 2ª linha/valor de vazão (2026-09-15) — mesma prioridade da sidebar:
+  // jusante da UHE primeiro, senão a vazão do próprio posto selecionado
+  // (pedido do usuário: "qualquer posto flu, com read_value tem vazao").
+  const secondaryChart = buildJusanteChartSeries(jusanteSeries) ?? buildFlowChartSeries(series);
+  const flowValue = jusanteSeries?.last.flow ?? series?.last.flow ?? null;
   const loading = history.isLoading || history.isFetching;
   // Prefixo da API (correto) quando disponível; só cai pro estático
   // (`station.prefix`, que tem registros corrompidos — ver `stations.ts`)
@@ -128,9 +131,9 @@ export default function StationModal({
         <div className="station-modal__toolbar">
           <span className="station-modal__toolbar-label">
             Nível
-            {/* Vazão de jusante (2026-09-15) — regra restrita a jusante de
-                reservatório, só quando a API preenche `read_value`. */}
-            {jusanteFlow != null && ` · Vazão: ${formatFlow(jusanteFlow)} m³/s`}
+            {/* Vazão (2026-09-15) — jusante da UHE ou do próprio posto, só
+                quando a API preenche `read_value`. */}
+            {flowValue != null && ` · Vazão: ${formatFlow(flowValue)} m³/s`}
           </span>
           <ViewModeToggle mode={viewMode} onChange={setViewMode} />
         </div>
@@ -143,7 +146,7 @@ export default function StationModal({
               <LevelChart
                 readings={series.readings}
                 thresholds={thresholds}
-                jusante={jusanteChart}
+                secondary={secondaryChart}
                 wide
               />
             ) : (

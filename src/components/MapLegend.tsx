@@ -7,6 +7,12 @@ interface MapLegendProps {
   onHover: (level: LevelClass | null) => void;
   /** Alterna a visibilidade das caixas daquele nível. */
   onToggle: (level: LevelClass) => void;
+  /** Nº de postos em cada status (2026-09-16, pedido do usuário: "na
+   * legenda, indique quantos postos existem com cada status") — conta o
+   * total real (não muda com `hidden`, que só esconde caixas da tela).
+   * Ausente = trata como 0 em todos (evita quebrar se algum outro lugar
+   * ainda não repassar essa prop). */
+  counts?: Record<LevelClass, number>;
   /** Só no fluxo: acrescenta um item explicando a barra escura (barragem). */
   showBarrageItem?: boolean;
 }
@@ -19,6 +25,7 @@ export default function MapLegend({
   hidden,
   onHover,
   onToggle,
+  counts,
   showBarrageItem,
 }: MapLegendProps) {
   return (
@@ -40,6 +47,7 @@ export default function MapLegend({
             onClick={() => onToggle(level)}
           >
             {LEVEL_LABELS[level]}
+            <span className="map-legend__count">{counts?.[level] ?? 0}</span>
           </button>
         );
       })}

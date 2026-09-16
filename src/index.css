@@ -1607,6 +1607,9 @@ body {
   backdrop-filter: blur(2px);
 }
 .map-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 14px;
   border: none;
   border-radius: 8px;
@@ -1619,6 +1622,17 @@ body {
     opacity 120ms ease,
     transform 120ms ease,
     box-shadow 120ms ease;
+}
+/* Contagem de postos por status (2026-09-16) — selo pequeno dentro do
+   próprio botão; fundo translúcido preto funciona em cima de qualquer
+   uma das 5 cores (todas médias/claras) sem precisar de uma cor por
+   nível. `color: inherit` já pega o texto escuro de cada `--item`. */
+.map-legend__count {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.15);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
 }
 .map-legend__item:hover {
   transform: translateY(-1px);
@@ -1647,7 +1661,7 @@ body {
 }
 .map-legend__item--extravasation {
   background: #f43f5e;
-  color: #4c0519;
+  color: #fff;
 }
 
 /* Item não-interativo (só no fluxo) explicando a barra escura das

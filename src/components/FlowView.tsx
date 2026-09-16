@@ -278,6 +278,24 @@ export default function FlowView({
     }
   }, [capturing]);
 
+  // Reenquadra ao TROCAR de diagrama (2026-09-16, pedido do usuário: "se
+  // vc for trocar de um diagrama para o outro, tem que disparar um
+  // fitview") — trocar de bacia (Tietê↔Ribeira) NÃO desmonta o
+  // `<FlowView>` (só troca `flowDiagram`/`stations` via prop, `App.tsx`
+  // não usa `key`), então o `fitView` do `<ReactFlow>` (só roda 1x, no
+  // mount) nunca disparava de novo — o zoom/pan ficava o mesmo de antes,
+  // errado pro sistema de coordenadas da bacia nova (cada uma tem o seu
+  // próprio, sem relação com o da outra). `flowDiagram` já é a referência
+  // certa pra depender disso: muda 1x por bacia (`FLOW_DIAGRAMS[region]`,
+  // estável). Não dispara durante `capturing` (o efeito acima já cuida
+  // do fitView do print, não tem por que os dois brigarem).
+  useEffect(() => {
+    const inst = rfInstanceRef.current;
+    if (!inst || capturing) return;
+    inst.fitView({ padding: 0.07, duration: 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowDiagram]);
+
   const nodes: Node[] = useMemo(() => {
     let fallbackIndex = 0;
     const stationNodes: (StationNode | ReservoirStationNodeType)[] = stations

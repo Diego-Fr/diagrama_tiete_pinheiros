@@ -36,7 +36,15 @@ const MAP_DEFAULTS: MapSettings = {
 };
 const FLOW_DEFAULTS: FlowSettings = {
   boxFormat: "default",
-  boxSize: "padrao",
+  // "Grande" (rótulo do dropdown — valor interno "extra-grande", 1.75x)
+  // como tamanho padrão do DIAGRAMA (2026-09-16, pedido do usuário:
+  // "tanto pro pinheiros quanto pro ribeira, a caixa pode ja iniciar do
+  // tamanho grande (diagrama no caso)"). `flowSettings` é uma ÚNICA
+  // configuração compartilhada entre as duas bacias (não por região, ver
+  // comentário na interface `FlowSettings` acima) — mudar aqui já cobre
+  // as duas de uma vez, não precisa duplicar em lugar nenhum. O mapa
+  // (`MAP_DEFAULTS`) continua "padrao" — pedido era só do diagrama.
+  boxSize: "extra-grande",
   riverFlowAnimation: true,
 };
 

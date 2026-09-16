@@ -89,23 +89,6 @@ function labelAnchor(feature: Feature): [number, number] | null {
   return [at[1]!, at[0]!];
 }
 
-/**
- * Um rio pode vir fatiado em vários trechos com o mesmo NomeTrecho — mostra
- * um único rótulo por nome (o do trecho mais longo), pra não empilhar labels.
- */
-function pickLabelFeatures(features: Feature[]): Feature[] {
-  const byName = new Map<string, Feature>();
-  for (const feature of features) {
-    const name = rawRiverName(feature);
-    const len = longestLine(feature.geometry).length;
-    const current = byName.get(name);
-    if (!current || len > longestLine(current.geometry).length) {
-      byName.set(name, feature);
-    }
-  }
-  return [...byName.values()];
-}
-
 interface RiversLayerProps {
   /** Liga/desliga a faixa animada do sentido da vazão. */
   flowAnimation: boolean;
@@ -114,7 +97,12 @@ interface RiversLayerProps {
 /**
  * Rios principais (GeoJSON do WFS do DAEE) numa pane própria (z-index 350),
  * abaixo das linhas-guia e das caixas. Traço base + faixa animada (sentido da
- * vazão, por rio) + um rótulo discreto por rio perto do curso.
+ * vazão, por rio) + um rótulo por FEATURE (trecho) do GeoJSON — sem dedup por
+ * nome (2026-09-16, pedido do usuário: "retire [a regra de dedup], cada vez
+ * que um rio aparecer mesmo que seja label igual, pode exibir"; antes só o
+ * trecho mais longo de cada `NomeTrecho` ganhava rótulo, via
+ * `pickLabelFeatures` — removida). Um rio fatiado em vários trechos agora
+ * mostra o nome repetido em cada um.
  */
 export default function RiversLayer({ flowAnimation }: RiversLayerProps) {
   const { data } = useRivers();
@@ -136,7 +124,7 @@ export default function RiversLayer({ flowAnimation }: RiversLayerProps) {
           style={flowStyle}
         />
       )}
-      {pickLabelFeatures(data.features).map((feature, i) => {
+      {data.features.map((feature, i) => {
         const anchor = labelAnchor(feature);
         if (!anchor) return null;
         return (
